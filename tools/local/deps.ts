@@ -79,13 +79,18 @@ export function seedCatalog(db: FakeDb): void {
   }
 }
 
-export function createLocalDeps(start = '2026-05-20T06:00:00.000Z', overrides: Partial<AppConfig> = {}): LocalDeps {
+export function createLocalDeps(
+  start = '2026-05-20T06:00:00.000Z',
+  overrides: Partial<AppConfig> = {},
+  /** 本地 HTTP 服务的对象存储地址前缀；空串 = 同源相对路径（走 Vite 代理） */
+  storageBase = 'https://storage.local',
+): LocalDeps {
   const db = new FakeDb();
   seedCatalog(db);
   let current = new Date(start);
   return {
     db,
-    storage: new FakeStorage(),
+    storage: new FakeStorage(storageBase),
     config: testConfig(overrides),
     now: () => current,
     clock: {

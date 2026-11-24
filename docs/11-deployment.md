@@ -1,6 +1,6 @@
 # 11 · Qoder Sites 部署手册（开发 / 预发 / 生产）
 
-> 适用版本：第 9 轮最终交付（41 条路由、7 个迁移、470 项冒烟断言）。
+> 适用版本：第 9 轮最终交付（42 条路由、7 个迁移、470 项冒烟断言；2026-11-24 联调新增任务列表接口）。
 > 本文只写「怎么部署、怎么验、怎么退」，接口细节见 [04-api-contract.md](../docs/04-api-contract.md)，密钥与变量清单见 [05-environment.md](../docs/05-environment.md)。
 
 ## 0. 当前云端状态（部署前必读）
@@ -39,7 +39,7 @@
 node --version                          # ≥ 22.18，原生 type-stripping
 node tools/local/smoke.ts               # 期望 470 passed, 0 failed
 node tools/local/seed-smoke.ts          # 期望 12 passed, 0 failed（启动播种幂等）
-node tools/scripts/check-routes.ts      # 期望「manifest.ts 登记 41 条路由」「✓ 路由表自洽」
+node tools/scripts/check-routes.ts      # 期望「manifest.ts 登记 42 条路由」「✓ 路由表自洽」
 node tools/scripts/check-migrations.ts  # 期望 7 文件 / 98 语句 / 22 表
 node tools/scripts/check-schema-usage.ts# 期望 DAO 引用的表与列都在 DDL 里
 node tools/scripts/build-seeds.ts --check # 期望 72 / 120 / 24
@@ -199,7 +199,7 @@ query_database_rows({ siteId, tableName: "rewards",        columns: ["id"], limi
 12. 演示：session → state → fast-forward → 三种 scenario → reset；演示 token 调分享/公开池/AI 均 403；过期 401。
 13. 兜底限流：用脚本在同一 IP 快速打业务接口，确认 429 `api_rate_limited` + `Retry-After`，且 `/api/health` 不被挡。
 
-完整 41 条路由的调用顺序见 [01-architecture.md §12](../docs/01-architecture.md) 第 6 步；curl 示例见 [04-api-contract.md §0.4](../docs/04-api-contract.md)。
+完整 42 条路由的调用顺序见 [01-architecture.md §12](../docs/01-architecture.md) 第 6 步；curl 示例见 [04-api-contract.md §0.4](../docs/04-api-contract.md)。
 
 ## 8. 域名、HTTPS 与微信
 

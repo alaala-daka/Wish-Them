@@ -10,13 +10,21 @@ import {
   Sprout,
   Upload,
 } from 'lucide-react';
-import { productDay, settlement, type Task } from '../domain';
+import { productDay, settleDue, weekStart, type Task } from '../domain';
 import { prepareImage } from '../storage';
 import { go, Heading, Mascot, Paper, WishCard } from '../components';
 import NoWish from './NoWish';
 import type { Props } from './types';
 
-export function Today({ data, update, notify, isDemo }: Props) {
+const isDone = (data: Props['data'], task: Task) =>
+  task.status === 'done' ||
+  task.status === 'made_up' ||
+  data.checkins.some((checkin) => checkin.taskId === task.id);
+
+const canMakeup = (data: Props['data'], task: Task) =>
+  data.makeupAvailable && weekStart(task.date) === weekStart(productDay());
+
+export function Today({ data, notify, isDemo, actions }: Props) {
   const wish = data.wish,
     day = productDay();
   const tasks = wish?.tasks.filter((t) => t.date === day) || [];
@@ -48,20 +56,20 @@ export function Today({ data, update, notify, isDemo }: Props) {
   async function submit() {
     if (!selected || !image || busy) return;
     setBusy(true);
+    setError('');
     try {
-      const record = {
-        taskId: selected.id,
-        image,
-        note: note.trim(),
-        at: new Date().toISOString(),
-      };
-      await update((d) => ({
-        ...d,
-        checkins: [...d.checkins.filter((c) => c.taskId !== selected.id), record],
-      }));
-      notify('今天的小事已记录，心意又近了一点。');
-    } catch {
-      setError('记录未保存，请重试。');
+      if (selected.status === 'missed') {
+        await actions.makeup(selected.id, image, note.trim());
+        notify('已用本周补卡券补上这件小事。');
+      } else {
+        await actions.checkin(selected.id, image, note.trim());
+        notify('今天的小事已记录，心意又近了一点。');
+      }
+      setSelected(null);
+      setImage('');
+      setNote('');
+    } catch (e) {
+      setError((e as Error).message || '记录未保存，请重试。');
     } finally {
       setBusy(false);
     }
@@ -72,10 +80,8 @@ export function Today({ data, update, notify, isDemo }: Props) {
         <NoWish />
       </div>
     );
-  const status = settlement(data);
-  const completed = shownTasks.filter(
-    (t) => t.kind !== 'money' && data.checkins.some((c) => c.taskId === t.id),
-  ).length;
+  const due = settleDue(data);
+  const completed = shownTasks.filter((t) => t.kind !== 'money' && isDone(data, t)).length;
   return (
     <div className="page">
       <Heading
@@ -108,7 +114,8 @@ export function Today({ data, update, notify, isDemo }: Props) {
           </div>
           {shownTasks.length ? (
             shownTasks.map((task) => {
-              const done = data.checkins.some((c) => c.taskId === task.id);
+              const done = isDone(data, task);
+              const missed = task.status === 'missed';
               return (
                 <Paper key={task.id} className={`task-card ${done ? 'done' : ''}`}>
                   <div className="task-heading">
@@ -132,7 +139,12 @@ export function Today({ data, update, notify, isDemo }: Props) {
                     {done && (
                       <span className="done-label">
                         <Check size={14} />
-                        已完成
+                        {task.status === 'made_up' ? '已补卡' : '已完成'}
+                      </span>
+                    )}
+                    {!done && missed && (
+                      <span className="done-label missed-label">
+                        {canMakeup(data, task) ? '可补卡' : '已错过'}
                       </span>
                     )}
                   </div>
@@ -140,6 +152,7 @@ export function Today({ data, update, notify, isDemo }: Props) {
                   <p>用一张照片或截图，收藏这件小事。</p>
                   <button
                     className={done ? 'secondary' : 'primary'}
+                    disabled={isDemo && !done}
                     onClick={() => {
                       setSelected(task);
                       const c = data.checkins.find((r) => r.taskId === task.id);
@@ -148,7 +161,15 @@ export function Today({ data, update, notify, isDemo }: Props) {
                       setError('');
                     }}
                   >
-                    {done ? '查看记录' : '去记录'}
+                    {isDemo && !done
+                      ? '演示模式只读'
+                      : done
+                        ? '查看记录'
+                        : missed
+                          ? canMakeup(data, task)
+                            ? '去补卡'
+                            : '已错过'
+                          : '去记录'}
                   </button>
                 </Paper>
               );
@@ -158,7 +179,7 @@ export function Today({ data, update, notify, isDemo }: Props) {
               <CheckCheck size={34} />
               <h2>这一份约定，已经走到这里</h2>
               <p>今天没有新的任务，可以翻翻记录。</p>
-              {status.due && (
+              {due && (
                 <button className="primary" onClick={() => go('/settle')}>
                   查看约定结果
                 </button>
@@ -251,14 +272,25 @@ export function Today({ data, update, notify, isDemo }: Props) {
               {current ? (
                 <p className="tag green">
                   <Check size={14} />
-                  已保存到本机
+                  已保存到账号
+                </p>
+              ) : selected.status === 'missed' && !canMakeup(data, selected) ? (
+                <p className="muted">
+                  这件小事已经错过，本周补卡券不可用或已跨周，下周会重新发放。
                 </p>
               ) : (
                 <>
                   <button className="primary full" disabled={!image || busy} onClick={submit}>
-                    {busy ? '正在处理…' : '收好今天的记录'}
+                    {busy
+                      ? '正在处理…'
+                      : selected.status === 'missed'
+                        ? '用补卡券补上'
+                        : '收好今天的记录'}
                   </button>
                   {!image && <p className="muted">添加照片后即可完成记录。</p>}
+                  {selected.status === 'missed' && (
+                    <p className="muted">补卡会使用本周唯一的一张券。</p>
+                  )}
                 </>
               )}
             </>

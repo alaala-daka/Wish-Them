@@ -13,15 +13,27 @@ interface StoredObject {
 
 export class FakeStorage implements StorageClient {
   private readonly objects = new Map<string, StoredObject>();
+  private readonly publicBase: string;
+
+  /**
+   * @param publicBase 本地 HTTP 服务地址。空串生成同源相对路径（Vite 代理到本机后端），
+   *                   冒烟测试仍用默认的 storage.local 假地址。
+   */
+  constructor(publicBase = 'https://storage.local') {
+    this.publicBase = publicBase;
+  }
+
+  private publicUrl(kind: 'upload' | 'get', objectPath: string, query = ''): string {
+    const base = this.publicBase.replace(/\/$/, '');
+    return `${base}/${kind}/${encodeURIComponent(objectPath)}${query}`;
+  }
 
   async createSignedUploadUrl(objectPath: string, _options: { upsert: boolean }): Promise<{ signedUrl: string }> {
-    return { signedUrl: `https://storage.local/upload/${encodeURIComponent(objectPath)}` };
+    return { signedUrl: this.publicUrl('upload', objectPath) };
   }
 
   async createSignedUrl(objectPath: string, expiresInSeconds: number): Promise<{ signedUrl: string }> {
-    return {
-      signedUrl: `https://storage.local/get/${encodeURIComponent(objectPath)}?expires=${expiresInSeconds}`,
-    };
+    return { signedUrl: this.publicUrl('get', objectPath, `?expires=${expiresInSeconds}`) };
   }
 
   async download(objectPath: string): Promise<Response> {

@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "server": "node tools/local/serve.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "tsx --test tests/*.test.ts",
+    "check": "node tools/scripts/check-routes.ts && node tools/scripts/check-migrations.ts && node tools/scripts/check-schema-usage.ts && node tools/scripts/build-seeds.ts --check",
     "format": "prettier --write src tests/*.ts vite.config.ts",
     "format:check": "prettier --check src tests/*.ts vite.config.ts"
   },

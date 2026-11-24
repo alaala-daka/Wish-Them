@@ -1,19 +1,26 @@
 import { useState } from 'react';
 import { Check, Feather, RefreshCw, ShieldCheck } from 'lucide-react';
-import { createWish, emptyDraft, questions, relations, type AppData, type Draft } from './domain';
+import { emptyDraft, questions, relations, type AppData, type Draft } from './domain';
 import type { Update } from './App';
+import type { Actions } from './actions';
+import type { AiResult } from './api';
 import { go, Heading, Mascot, Paper, PrivateNote, WishCard } from './components';
 export default function Create({
   data,
   update,
   notify,
+  actions,
+  isDemo,
 }: {
   data: AppData;
   update: Update;
   notify: (s: string) => void;
+  actions: Actions;
+  isDemo: boolean;
 }) {
   const [draft, setDraft] = useState(data.draft),
-    [suggestions, setSuggestions] = useState(false),
+    [aiResult, setAiResult] = useState<AiResult | null>(null),
+    [aiBusy, setAiBusy] = useState(false),
     [batch, setBatch] = useState(0),
     [agreed, setAgreed] = useState(false),
     [signature, setSignature] = useState(''),
@@ -32,29 +39,42 @@ export default function Create({
     `希望${draft.name}最近的烦心事，都慢慢有了答案。`,
     `希望${draft.name}每天好好吃饭，平安快乐。`,
   ];
+  async function askAi() {
+    if (!draft.text.trim()) {
+      setError('先写一句愿望，再让 AI 帮你找表达。');
+      return;
+    }
+    setAiBusy(true);
+    setError('');
+    try {
+      setAiResult(await actions.polish(draft.text.trim(), draft.relation));
+    } catch (e) {
+      setError((e as Error).message || 'AI 润色暂时不可用，可先使用模板。');
+    } finally {
+      setAiBusy(false);
+    }
+  }
   async function sign() {
     if (!agreed || !signature.trim() || busy) return;
+    const missing = draft.answers.findIndex((answer) => !answer.trim());
+    if (missing >= 0) {
+      setDraft({ ...draft, step: 2, question: missing });
+      setError(`还需要回答第 ${missing + 1} 个问题，才能签下约定。`);
+      return;
+    }
     setBusy(true);
+    setError('');
     try {
-      const wish = { ...createWish(draft), signature: signature.trim() };
-      await update((d) => ({
-        ...d,
-        wish,
-        draft: emptyDraft(),
-        checkins: [],
-        ledger: [],
-        letter: '',
-        celebration: false,
-      }));
-      notify('约定已签下，你的愿签已在本机保存。');
+      await actions.createWish(draft, signature.trim());
+      notify('约定已签下，愿签已保存到你的账号。');
       go('/today');
-    } catch {
-      setError('约定没有保存，请重试。');
+    } catch (e) {
+      setError((e as Error).message || '约定没有保存，请重试。');
     } finally {
       setBusy(false);
     }
   }
-  if (data.wish)
+  if (data.wish && data.wish.status !== 'settled')
     return (
       <div className="page">
         <Paper className="empty">
@@ -83,7 +103,7 @@ export default function Create({
           ))}
           <p>
             <ShieldCheck size={20} />
-            问答仅保存在这台设备，不会出现在愿签池。
+            问答会加密保存在账号里，不会出现在愿签池。
           </p>
         </aside>
         <Paper className="editor">
@@ -161,24 +181,33 @@ export default function Create({
                   </button>
                 ))}
               </div>
-              <button className="secondary polish" onClick={() => setSuggestions(!suggestions)}>
+              <button
+                className="secondary polish"
+                disabled={aiBusy || isDemo}
+                onClick={() => void askAi()}
+              >
                 <Feather size={16} />
-                帮我找找表达
+                {aiBusy ? '正在想表达…' : '帮我找找表达'}
               </button>
-              {suggestions && (
+              {isDemo && <p className="muted">演示模式不调用 AI 润色。</p>}
+              {aiResult && (
                 <div className="suggestions">
-                  <p className="muted">离线模板建议 · 当前未连接AI服务，选用后才替换。</p>
-                  {[
-                    `愿${draft.name}的日子轻松一点，身边总有温柔的陪伴。`,
-                    `希望${draft.name}照顾好自己，也把一点时间留给开心。`,
-                    `愿每一件小事，都让${draft.name}感到被惦记。`,
-                  ].map((t) => (
-                    <div key={t}>
-                      <p>{t}</p>
+                  <p className="muted">
+                    <span className="tag">{aiResult.ai_label}</span>
+                    {aiResult.fallback
+                      ? ' AI 服务暂不可用，以下为模板建议；选用后才会替换，不会自动保存。'
+                      : ' 以下建议仅供参考，选用后才会替换，不会自动保存。'}
+                    {aiResult.quota && ` 今日剩余额度 ${aiResult.quota.remaining} 次。`}
+                  </p>
+                  {aiResult.suggestions.map((suggestion) => (
+                    <div key={suggestion.id}>
+                      <p>
+                        <span className="tag">{suggestion.label}</span> {suggestion.text}
+                      </p>
                       <button
                         onClick={() => {
-                          change({ text: t, ai: false });
-                          setSuggestions(false);
+                          change({ text: suggestion.text, ai: true });
+                          setAiResult(null);
                         }}
                       >
                         选用
@@ -191,23 +220,25 @@ export default function Create({
           )}
           {draft.step === 2 && (
             <>
-              <span className="tag">问题 {draft.question + 1} / 5 · 可跳过</span>
+              <span className="tag">问题 {draft.question + 1} / 5 · 签下约定前需全部完成</span>
               <h2>{questions[draft.question]}</h2>
               <label>
-                写一点你愿意说的
+                写一点你愿意说的（1–200 字）
                 <textarea
                   rows={6}
-                  maxLength={300}
+                  maxLength={200}
                   value={draft.answers[draft.question]}
                   onChange={(e) => {
                     const answers = [...draft.answers];
                     answers[draft.question] = e.target.value;
                     change({ answers });
                   }}
-                  placeholder="不想回答也没关系，我们可以跳过。"
+                  placeholder="这些话只会加密保存在你的账号里。"
                 />
               </label>
-              <p className="muted">这些话不会出现在公开愿签和分享内容中。</p>
+              <p className="muted">
+                {draft.answers[draft.question].length}/200 · 答案不会出现在公开愿签和分享内容中。
+              </p>
             </>
           )}
           {draft.step === 3 && (
@@ -235,7 +266,7 @@ export default function Create({
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
                 />
-                我愿意认真完成约定，了解数据只保存在本机。
+                我愿意认真完成约定；五问会加密保存，照片仅自己可见。
               </label>
             </>
           )}
@@ -265,7 +296,7 @@ export default function Create({
                     : change({ step: 3 })
                 }
               >
-                跳过这题
+                下一题
               </button>
             )}
             {draft.step < 3 ? (

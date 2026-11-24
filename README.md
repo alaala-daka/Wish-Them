@@ -1,56 +1,149 @@
 # 愿TA · 暖木愿望邮局
 
-依据 `design/desktop-postoffice` 中已选定的桌面视觉参考搭建的本地 Web 应用基础工程。React + TypeScript + Vite，图片与结构化数据保存在浏览器 IndexedDB，无需服务器即可体验主流程。本项目未部署网站。
+替重要的人许一个愿，用 7 天里的小行动把它慢慢兑现。
 
-## 本地运行
+愿TA 是一个前后端分离的 Web 应用：前端用 React + TypeScript + Vite 构建暖木邮局界面，后端提供游客账号、愿签契约、每日任务、照片打卡、自然周账本、到期结算、公开愿签池与 AI 润色建议。所有业务规则都是确定性的，不依赖定时任务。
 
-需要 Node.js 22 或更新版本。
+![邮局首页](design/desktop-postoffice/01-邮局首页-v2-桌牌修正.png)
 
-```sh
-npm install
-npm run dev
+## 功能
+
+- **许愿**：12 种关系、称呼与代词、120 字愿望、可选的 AI 表达建议（始终标注「AI辅助」）。
+- **五问与立契**：五问答案加密保存；立契时一次性生成契约期内的每日任务，每天两件必做，周末追加可选钱任务。
+- **今日工作台**：上传照片或截图完成打卡；漏卡可在当周用唯一一张补卡券补上。
+- **账本**：自然周预算、非必要支出与兼职收入；超预算不拦截提交，周结余按 0 计。
+- **到期结算**：双重兑现 / 赛博实现 / 未实现三档结局，匹配礼物与差额档位，支持一次续期。
+- **愿签池**：匿名发布已结算的愿签，阅读与回信；举报达到阈值自动隐藏。
+- **账号**：游客建号、恢复码找回、30 天 Bearer Token；没有 Cookie 与静默刷新。
+- **独立演示**：`/#/demo` 使用后端真实任务、账本与结算引擎重放三种结局，不影响个人数据。
+
+## 技术栈
+
+| 层 | 技术 |
+| --- | --- |
+| 前端 | React 19、TypeScript、Vite 6、lucide-react |
+| 后端 | TypeScript，Deno 风格路由；本地用 Node.js 22 原生类型擦除直接运行 |
+| 数据 | 平台数据库（22 张表、7 份迁移）；本地为内存数据库，重启即清空 |
+| 存储 | 私有对象存储，两段式直传 + 600 秒签名 URL；本地提供内存版对象存储 |
+| 测试 | Node `node:test` 领域规则测试；470 项后端冒烟断言；Python Playwright 浏览器验收 |
+
+## 快速开始
+
+### 一键启动（Windows）
+
+双击项目根目录的 `start.bat`。脚本会检查 Node.js、安装依赖、启动后端与前端，并打开浏览器。
+
+### 手动启动
+
+需要 Node.js **22.18 或更新版本**（后端直接运行 TypeScript）。
+
+```bash
+npm install        # 安装前端依赖
+npm run server     # 终端 1：后端 http://127.0.0.1:8787
+npm run dev        # 终端 2：前端 http://127.0.0.1:5173
 ```
 
-在浏览器打开命令输出的本地地址。使用 `npm run build` 生成 `dist/`，`npm run preview` 预览构建结果，`npm test` 运行产品规则测试。
+浏览器打开 <http://127.0.0.1:5173>。Vite 会把 `/functions/v1/app` 与 `/__storage` 代理到本机后端，因此本地不需要额外配置 CORS。
 
-当前机器C盘空间不足，因此此次安装将 `node_modules` 与 `.npm-cache` 放到 `D:\CodexBuild\Yuan-20261121`，原目录使用目录链接。源码不依赖D盘绝对路径；换一台机器时直接在项目目录重新安装即可。不要将依赖目录与缓存作为源码交付。
+> 本地后端使用内存数据库和内存对象存储，**重启后端后数据清空**。适合联调与演示，不用于持久化部署。
 
-## 已实现
+### 生产构建
 
-- 暖木像素邮局首页：独立场景图、HTML文字与按钮、透明底女孩“小愿”、柜台上的愿签桌牌。
-- 四步许愿：12种关系、称呼与代词、120字愿望、可选模板、五问逐题跳过、键盘签名确认与草稿自动保存。
-- 今日工作台：每天两件必做，周末额外可选钱任务；选择、拖入或粘贴照片；压缩长边720px、JPEG不超过200KB；30字附言；记录刷新保留。
-- 账本：自然周预算与支出，超支结余取0，收入必须关联附图片的已完成钱任务，真实金额计算与删除确认。
-- 示例愿签池：分类、阅读与80字本地回信；不会向真实用户发送内容。
-- 我的：当前愿签、文字记录导出、清空本机数据。
-- 到期两幕结算：04:00中国时区日界、必做齐全才盖章、账本展开与本地信件保存。
-- 独立演示：地址加 `#/demo`，例如 `http://127.0.0.1:5173/#/demo`；可切换三种结果，不修改个人数据。正常界面不显示演示入口。
-- 桌面三栏布局、窄屏重排、键盘焦点、原生对话框与减少动效支持。
+```bash
+npm run build      # 输出 dist/
+npm run preview    # 本地预览，代理配置与开发环境一致
+```
 
-## 当前边界
+部署到其他域名时，用 `VITE_API_BASE` 指向完整 Function 前缀（例如 `https://example.com/functions/v1/app`），并在后端 `CORS_ALLOW_ORIGINS` 中放行前端来源。
 
-这是可运行的前端基础工程，不代表PRD全部后端能力已经完成。未接入：服务端认证与恢复码、云同步和私有对象存储、真实AI润色、公开发布审核、跨设备短链分享、补卡券与续期、后台权限、完整礼物目录、分享图和离线应用安装。当前任务使用固定的七天内容库；结算给出基础结果与通用兑现建议。
+## 配置
 
-问答和照片只保存在当前设备的当前浏览器，不做字段加密，不提供云备份。导出文字记录不含问答和照片，也不是恢复备份。清除浏览器数据会丢失本机记录。遇到储存失败会显示错误，不会显示保存成功。
+本地密钥与限流默认值见 `tools/local/deps.ts`，只用于开发，不要复用到线上。线上配置项见 `.env.example`：
+
+- 必填：`JWT_SIGNING_KEY`、`TOKEN_PEPPER`、`RECOVERY_PEPPER`、`IP_HASH_SALT`、`IDEM_FINGERPRINT_KEY`、`FIELD_ENCRYPTION_KEY`。
+- 可选：Token 有效期、各接口限流阈值、公开池举报阈值、AI 端点与额度等。
+- AI 未配置外部端点时自动使用模板建议，主流程不受影响。
+
+## API
+
+后端共 42 条路由，统一前缀 `/functions/v1/app`，成功与失败共用一个信封：
+
+```json
+{ "code": 0, "data": {}, "message": "ok", "requestId": "..." }
+{ "code": 400, "data": null, "message": "参数不合法。", "errorCode": "invalid_parameter", "requestId": "..." }
+```
+
+- 鉴权：`Authorization: Bearer <access_token>`。
+- 幂等：创建愿签必须带 `Idempotency-Key`，其余写接口可选。
+- 上传：`presign → 对象存储 PUT → complete`，业务接口只引用 `ready` 的文件。
+
+完整字段、错误码与调用顺序见：
+
+- [接口契约](docs/04-api-contract.md)
+- [前端对接手册](docs/12-frontend-integration.md)
+- [架构说明](docs/01-architecture.md)
 
 ## 目录
 
 ```text
-src/App.tsx          页面导航、独立演示、持久化更新队列
-src/Create.tsx       四步许愿与草稿
-src/pages/           首页、今日、账本、愿签池、我的、结算独立页面
-src/components.tsx   纸面、愿签、小愿等公共组件
-src/domain.ts        时间、任务、分类、账本、结算规则
-src/storage.ts       IndexedDB读写、浏览器内图片压缩
-src/styles.css       暖木色彩、布局、组件与响应式规则
-public/assets/       新生成并实际使用的配套素材
-tests/               产品规则与浏览器验证
-design/              原视觉方案与素材说明
-docs/                实施范围与验证记录
+src/                 React 应用
+  api.ts             后端 HTTP 客户端与 DTO 类型
+  remote.ts          服务端 DTO → 页面视图映射
+  session.ts         Token / 恢复码本机会话
+  actions.ts         页面可调用的业务动作类型
+  pages/             首页、今日、账本、愿签池、我的、结算
+  Create.tsx         四步许愿与草稿
+  domain.ts          时间、金额、演示与结算的纯规则
+  storage.ts         本机草稿与图片压缩
+backend/
+  server.ts          路由分发、鉴权、幂等、限流、错误封套
+  api/               按模块的文件即路由
+  domain/            纯业务规则
+  lib/               配置、加密、时间、校验、响应等基础设施
+database/
+  migrations/        7 份数据库迁移
+  seed/              任务模板、愿望模板与礼物目录
+tools/
+  local/             本地 HTTP 服务、内存数据库与对象存储
+  scripts/           路由 / 迁移 / schema / seed 校验器
+tests/               领域规则与浏览器验收
+docs/                架构、契约、部署与测试文档
+design/              视觉参考与素材说明
+public/              场景与角色素材
 ```
 
-## 素材
+## 测试
 
-场景 `public/assets/postoffice.png` 与透明女孩 `public/assets/xiaoyuan.png` 使用内置图像工具，根据已选定的首页图生成。原视觉参考保留不改。素材生成记录见 `design/desktop-postoffice/web-素材生成说明.txt`。
+```bash
+npm test           # 领域规则（中国时区日界、任务规则、账本、结算）
+npm run check      # 路由表、迁移、schema 引用、seed 形状
+python tests/browser_smoke.py   # 前后端联调验收（需先启动 server 与 dev）
+```
 
-女孩当前为单姿态透明素材，界面有进场和状态文字反馈；尚未制作逐帧动作精灵表。场景里不烘焙按钮或正文，页面文字可选择、可缩放。
+浏览器验收需要 Python Playwright 与系统 Edge；脚本覆盖注册、许愿、五问、上传打卡、账本、愿签池、恢复码、演示结算与窄屏布局。
+
+后端全量行为断言：
+
+```bash
+node tools/local/smoke.ts          # 470 项
+```
+
+## 隐私与数据
+
+- 五问答案以 AES-256-GCM 字段级加密保存，接口不回显。
+- 打卡与账本证明存放在私有对象存储，只通过 600 秒签名 URL 访问。
+- 愿签默认私密；公开愿签池只展示白名单字段，不包含昵称、账号、五问或账本明细。
+- Token 只放 `Authorization` 头；恢复码只在注册或找回成功时返回一次。
+- 导出文字记录不包含五问答案和照片，不能作为跨设备恢复手段。
+
+## 文档
+
+- [BACKEND.md](BACKEND.md)：后端能力、路由与设计取舍
+- [docs/architecture](docs/01-architecture.md)：运行形态与分层
+- [docs/conventions](docs/02-conventions.md)：响应、错误码、时间与金额约定
+- [docs/deployment](docs/11-deployment.md)：迁移、seed、发布与回滚
+- [docs/test-report](docs/14-test-report.md)：测试分组与未验证项
+
+## License
+
+[MIT](LICENSE)

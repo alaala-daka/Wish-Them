@@ -2,7 +2,7 @@
 
 > 运行平台：Qoder Sites（Server Functions + Qoder Database + Object Storage + Cloud Agents）
 > 本文是第 1 轮的架构设计，已在第 2–8 轮实现中就地更新：目录结构、路由登记方式、确定性规则位置、密钥清单与一致性手段均以实际代码为准。
-> 已实现 41 条路由（系统与账号 7 条 + 愿签与契约 5 条 + 每日任务与补卡 3 条 + 账本 3 条 + 结算与续期 3 条 + 上传 3 条 + 分享 3 条 + 公开池 5 条 + 回信 3 条 + AI 1 条 + 演示 5 条）。未实现的接口（任务列表/详情、离线同步、结算 ACK/信件编辑/兑现卡图、公开池接力、通知、AI 其余三种能力）保留设计，标注见 [04-api-contract.md](../docs/04-api-contract.md) §0.1 与 §0.2。
+> 已实现 42 条路由（系统与账号 7 条 + 愿签与契约 6 条 + 每日任务与补卡 3 条 + 账本 3 条 + 结算与续期 3 条 + 上传 3 条 + 分享 3 条 + 公开池 5 条 + 回信 3 条 + AI 1 条 + 演示 5 条）。未实现的接口（任务详情、离线同步、结算 ACK/信件编辑/兑现卡图、公开池接力、通知、AI 其余三种能力）保留设计，标注见 [04-api-contract.md](../docs/04-api-contract.md) §0.1 与 §0.2。
 
 ---
 
@@ -80,7 +80,7 @@ backend/
 │  └─ seed/                      # wish-templates.ts / tasks.ts / rewards.ts = 内容真源
 │                                #   build-seeds.ts 产出同名 .json（线上导入的就是它）+ README
 ├─ api/
-│  ├─ manifest.ts                # 路由注册表（文件即路由的唯一登记处，当前 41 条）
+│  ├─ manifest.ts                # 路由注册表（文件即路由的唯一登记处，当前 42 条）
 │  ├─ health/index.ts            # GET  /api/health
 │  ├─ health/deep.ts             # GET  /api/health/deep（依赖自检）
 │  ├─ auth/guest.ts              # POST /api/auth/guest
@@ -178,7 +178,7 @@ backend/
 | `tools/scripts/check-schema-usage.ts` | 代码里出现的表名/列名/写入键是否真在 DDL 里 | 列名写错线上是 400（PGRST204/205），本地内存库是宽容实现，最容易溜过去 |
 | `tools/scripts/build-seeds.ts` | 内容库形状（愿望模板 72 / 任务模板 120 / 礼物 24）、id 确定性、内存库不套默认值所以 `is_active`/`min_budget_cents` 必须显式给值；`--check` 只校验不写盘 | 内容库是任务生成与礼物匹配的输入，形状错了后面全错 |
 | `tools/scripts/diff-schema.ts` | 第 1 轮设计稿 `db/schema.sql` 与可执行迁移的差异清单 | 防止「照着设计稿写代码」用到已被删掉的表或列 |
-| `tools/local/smoke.ts` | 41 条路由的行为（**470 项断言**）：鉴权、恢复码、限流、幂等、演示隔离 + 五问加密、立契、任务引擎、崩溃补齐、游标分页 + 今日任务/惰性日界/打卡覆盖/补卡券/跨周过期 + 账本预算/流水/超预算/收入关联/跨周聚合 + 结算时间门禁/三档结局/礼物三档差额/并发 CAS/续期重算/权限隔离 + 上传实测字节与格式拒绝/pending 2h 失效/分享轮换撤销/公开池脱敏与举报隐藏/回信日限与删除权限 + AI 模板/agent/脱敏/缓存/额度/超时/坏输出 + 演示基线/快进/三结局/重置/过期/最早 3 条会话清理 + 统一安全响应头/控制字符清洗/405 Allow/API_PER_MINUTE 兜底 | 无云端资源条件下唯一能复现的一致性检查 |
+| `tools/local/smoke.ts` | 42 条路由的行为（**470 项断言**）：鉴权、恢复码、限流、幂等、演示隔离 + 五问加密、立契、任务引擎、崩溃补齐、游标分页 + 今日任务/惰性日界/打卡覆盖/补卡券/跨周过期 + 账本预算/流水/超预算/收入关联/跨周聚合 + 结算时间门禁/三档结局/礼物三档差额/并发 CAS/续期重算/权限隔离 + 上传实测字节与格式拒绝/pending 2h 失效/分享轮换撤销/公开池脱敏与举报隐藏/回信日限与删除权限 + AI 模板/agent/脱敏/缓存/额度/超时/坏输出 + 演示基线/快进/三结局/重置/过期/最早 3 条会话清理 + 统一安全响应头/控制字符清洗/405 Allow/API_PER_MINUTE 兜底 | 无云端资源条件下唯一能复现的一致性检查 |
 
 跑法两种：`node tools/scripts/<file>.ts`（本机 Node ≥ 22.18 直接执行 `.ts`，无需构建），或装了 Deno 时 `cd backend && deno task verify`（= `deno check index.ts` + 上面四个校验器，任务定义在 `backend/deno.json`）。`tools/local/serve.ts` 起一个本地 HTTP 端口，用内存库驱动同一个 `createApp()`，方便 curl 手工验。
 
@@ -430,9 +430,9 @@ SQL 已落成 `database/migrations/0001…0007`（**7 个文件 / 98 条语句 /
 3. 每个迁移文件一次 `create_database_migration({ siteId, requestId, schemaRef, clientMigrationId, displayName, sql, accessPolicies: [] })` → 用返回的 `planRef` 调 `apply_database_migration({ migrationId, requestId, planRef, confirm: true })` → 重新 `get_database_schema` 核对表与索引。`accessPolicies: []` 是 function_backend 的写法，策略由平台生成，全部数据只能经 Function 访问。
 4. 内容库 `database/seed/*.json`（72 愿望模板 / 120 任务模板 / 24 礼物，由同目录 `.ts` 真源经 `build-seeds.ts` 产出）用 `insert_database_rows` 分批导入；该工具**不支持 upsert**，重跑前先查已有 id、只补缺失行（id 确定性，可安全对齐）。迁移 SQL 内不含 DML，平台也不允许。**不导 `task_templates` 就无法立契**（503 `task_pool_empty`）。
 5. `prepare_site({ actionId, projectRoot, webDirectory: "dist", functionDirectory: "backend", databaseAccess: "read_write", schemaRef, secretNames })` → 确认草稿 ready 后 `publish_site`（同一 actionId 与完全相同的输入）。`prepare_site` 只生成不可变草稿、不发布；actionId 在重试时保持不变。
-6. 冒烟：`GET /api/health` → `GET /api/health/deep` → `POST /api/auth/guest` → `GET /api/me` → `PATCH /api/me` → `POST /api/auth/recover` → `POST /api/auth/logout` → `POST /api/wishes` → `PUT /api/wishes/:id/answers` → `POST /api/wishes/:id/contract` → `GET /api/wishes/:id` → `GET /api/wishes` → `GET /api/wishes/:id/tasks/today` → `POST /api/tasks/:id/checkin` → `POST /api/tasks/:id/makeup` → `GET /api/wishes/:id/ledger` → `PUT /api/ledger/weeks/:weekStart` → `POST /api/ledger/entries` → `POST /api/wishes/:id/settle` → `GET /api/wishes/:id/settlement` → `POST /api/wishes/:id/extend` → `POST /api/uploads/presign` → 真实 PUT → `POST /api/uploads/complete` → `POST /api/uploads/:id/url` → `POST /api/wishes/:id/share` → `GET /api/s/:token` → `DELETE /api/wishes/:id/share` → `POST /api/pool/publish` → `GET /api/pool` → `GET /api/pool/:id` → `POST /api/pool/:id/replies` → `GET /api/pool/:id/replies` → `DELETE /api/replies/:id` → `POST /api/pool/:id/report` ×3 → `POST /api/pool/:id/unpublish` → `POST /api/ai/polish-wish` → `POST /api/demo/session` → `GET /api/demo/state` → `POST /api/demo/fast-forward` → `POST /api/demo/scenario` ×3 → `POST /api/demo/reset`（41 条路由全覆盖，真实数据非 fixture）。**重点复验九件事**：用 Owner 侧 `delete_database_row` 在测试站点删掉一条 `tasks` 行再重签，应当只补回那一条（`insertIfAbsent` 的逐行忽略冲突语义）；同一任务打卡两次，`checkins` 始终只有一行且字段为最后一次；解一次五问密文确认 Deno edge 的 Web Crypto 与本地 Node 一致；账本读出的 `realized_cents` 必须等于"已计入周结余 + 全部收入"的整数复算；结算并发两次只产生一版快照，且 `settlements` 行落库后愿签才变 `settled`；**对象存储的 presign PUT（带 content-type）→ download 实测字节 → 600 秒签名 GET** 全链路可用且私有桶阻断直连；`GET /api/s/:token`、`/api/pool*`、回信列表的响应体不含五问/账本/金额/文件/用户标识；AI 润色在未配端点时返回 3 条带「AI辅助」标签的模板建议且不写愿签，配端点后同一输入第二次 `cached:true` 且模型只调一次；演示快进的结算统计与 `tasks` 行逐项一致、`realized_cents = saved + income`，且真实用户列表与公开池看不到演示数据。
+6. 冒烟：`GET /api/health` → `GET /api/health/deep` → `POST /api/auth/guest` → `GET /api/me` → `PATCH /api/me` → `POST /api/auth/recover` → `POST /api/auth/logout` → `POST /api/wishes` → `PUT /api/wishes/:id/answers` → `POST /api/wishes/:id/contract` → `GET /api/wishes/:id/tasks` → `GET /api/wishes/:id` → `GET /api/wishes` → `GET /api/wishes/:id/tasks/today` → `POST /api/tasks/:id/checkin` → `POST /api/tasks/:id/makeup` → `GET /api/wishes/:id/ledger` → `PUT /api/ledger/weeks/:weekStart` → `POST /api/ledger/entries` → `POST /api/wishes/:id/settle` → `GET /api/wishes/:id/settlement` → `POST /api/wishes/:id/extend` → `POST /api/uploads/presign` → 真实 PUT → `POST /api/uploads/complete` → `POST /api/uploads/:id/url` → `POST /api/wishes/:id/share` → `GET /api/s/:token` → `DELETE /api/wishes/:id/share` → `POST /api/pool/publish` → `GET /api/pool` → `GET /api/pool/:id` → `POST /api/pool/:id/replies` → `GET /api/pool/:id/replies` → `DELETE /api/replies/:id` → `POST /api/pool/:id/report` ×3 → `POST /api/pool/:id/unpublish` → `POST /api/ai/polish-wish` → `POST /api/demo/session` → `GET /api/demo/state` → `POST /api/demo/fast-forward` → `POST /api/demo/scenario` ×3 → `POST /api/demo/reset`（42 条路由全覆盖，真实数据非 fixture）。**重点复验九件事**：用 Owner 侧 `delete_database_row` 在测试站点删掉一条 `tasks` 行再重签，应当只补回那一条（`insertIfAbsent` 的逐行忽略冲突语义）；同一任务打卡两次，`checkins` 始终只有一行且字段为最后一次；解一次五问密文确认 Deno edge 的 Web Crypto 与本地 Node 一致；账本读出的 `realized_cents` 必须等于"已计入周结余 + 全部收入"的整数复算；结算并发两次只产生一版快照，且 `settlements` 行落库后愿签才变 `settled`；**对象存储的 presign PUT（带 content-type）→ download 实测字节 → 600 秒签名 GET** 全链路可用且私有桶阻断直连；`GET /api/s/:token`、`/api/pool*`、回信列表的响应体不含五问/账本/金额/文件/用户标识；AI 润色在未配端点时返回 3 条带「AI辅助」标签的模板建议且不写愿签，配端点后同一输入第二次 `cached:true` 且模型只调一次；演示快进的结算统计与 `tasks` 行逐项一致、`realized_cents = saved + income`，且真实用户列表与公开池看不到演示数据。
 
-**第 3–7 步尚未执行**：迁移与 seed 会创建/修改云端资源，且 `prepare_site` 曾被拒绝；本地已验证的是 SQL 子集、seed 形状与 41 条路由的行为（470 项断言）。0007 尚未在云端执行。
+**第 3–7 步尚未执行**：迁移与 seed 会创建/修改云端资源，且 `prepare_site` 曾被拒绝；本地已验证的是 SQL 子集、seed 形状与 42 条路由的行为（470 项断言 + 任务列表接口的浏览器验收）。0007 尚未在云端执行。
 
 ## 13. 非功能目标（后端侧）
 

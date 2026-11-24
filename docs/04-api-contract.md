@@ -3,7 +3,7 @@
 逻辑路径 `/api/...`，实际请求 `{origin}/functions/v1/app` + 逻辑路径（前缀白名单见 [02-conventions.md](../docs/02-conventions.md) §1）。鉴权一律 `Authorization: Bearer <token>`（02 §5），没有 Cookie、没有 refresh token。
 通用错误不逐条重复，各接口只列**特有**错误码；错误码总表在 02 §4，信封与状态码在 02 §2/§3，本文 §0.3 另给全局速查。
 
-> **阅读顺序**：§0.1 是第 2–9 轮**已实现并跑过 470 项冒烟断言**的 41 条接口，字段名与错误码就是线上行为；§0.3 是全局约定速查；§0.4 是按模块的 curl 示例。§1–§16 保留第 1 轮设计稿作对照，其中已被取代的部分见 §0.2，**不要照抄**。
+> **阅读顺序**：§0.1 是第 2–9 轮**已实现并跑过 470 项冒烟断言**的 42 条接口，字段名与错误码就是线上行为；§0.3 是全局约定速查；§0.4 是按模块的 curl 示例。§1–§16 保留第 1 轮设计稿作对照，其中已被取代的部分见 §0.2，**不要照抄**。
 
 ## 0. 总览
 
@@ -12,7 +12,7 @@
 | A 系统与元数据 | 4 | 2 | 匿名 | B-01~B-04、非功能 |
 | B 认证 | 6 | 3 | 匿名/Token | A-01~A-03、US-06 |
 | C 我的与设置 | 5 | 2 | Token | A-04、H-04 |
-| D 愿签与契约 | 8 | 5 | Token | B-01~B-08、US-01/04/08 |
+| D 愿签与契约 | 8 | 6 | Token | B-01~B-08、US-01/04/08 |
 | E 任务与打卡 | 8 | 3 | Token | C-01~C-07、US-02、E2E-02 |
 | F 文件与上传 | 4 | 3 | Token | C-03、C-07 |
 | G 账本 | 4 | 3 | Token | D-01~D-05、E2E-03 |
@@ -24,9 +24,9 @@
 | M AI 辅助 | 5 | 1 | Token | G-01~G-04、US-08 |
 | N 演示模式 | 7 | 5 | 匿名/演示 Token | I-01~I-07、E2E-08/09 |
 | O 埋点 | 1 | 0 | Token/匿名 | H-03、8.2 |
-| **合计** | **80** | **41** | | |
+| **合计** | **80** | **42** | | |
 
-### 0.1 第 2–9 轮已实现（41 条，470 项冒烟断言与四个校验器全绿）
+### 0.1 第 2–9 轮已实现（42 条，470 项冒烟断言与四个校验器全绿）
 
 出入参、状态码与错误码以这一节为准；`route` 声明字段与 curl 调用示例的唯一真源是每个路由文件的头注释。
 
@@ -108,6 +108,7 @@
 
 | 方法 · 路径 | 鉴权 | `operation` / `idempotent` / `maxBodyBytes` | 入参 | 出参 `data` | 特有错误码 |
 | --- | --- | --- | --- | --- | --- |
+| `GET /api/wishes/:id/tasks` | Bearer | `wish.tasks` / none / 0 | path `id` = 愿签 uuid；query `date?` = `YYYY-MM-DD` | `{ wish_id, date:string\|null, tasks:[Task(+checkin:Checkin\|null)] }`；按 `day_index`、`seq` 升序；前端账本/结算读取整份任务表 | `invalid_parameter`(400，id/date 非法) `wish_forbidden`(403，非作者) `wish_not_found`(404) |
 | `GET /api/wishes/:id/tasks/today` | Bearer | `wish.today_tasks` / none / 0 | path `id` = 愿签 uuid | `{ wish_id, date:"YYYY-MM-DD", tasks:[Task(+checkin:Checkin\|null)], makeup_ticket:MakeupTicket\|null }`；**只含当天**，不返回总天数/剩余天数；每日首次访问惰性把此前 `pending` 标成 `missed` | `invalid_parameter`(400，id 非 UUID) `wish_forbidden`(403，非作者) `wish_not_found`(404，含演示隔离) `wish_not_active`(400 + `details.status`) |
 | `POST /api/tasks/:id/checkin` | Bearer | `task.checkin` / **optional** / 1024 | `{ proof_id(uuid，必填), note?`text 0..30` }` | `{ task:Task(status:"done"), checkin:Checkin, already_done:bool, notice:string }`；重复提交 `already_done:true` 并**原地覆盖**同一行打卡（证明与备注可改） | `task_not_found`(404) `wish_not_found`(404) `wish_forbidden`(403，非作者) `wish_not_active`(400) `task_not_today`(400 + `details.task_date/today`) `makeup_required`(400，已 missed) `invalid_task_state`(400 + `details.status`) `invalid_parameter`(400 + `details.fields`) `proof_not_found`(400) `proof_not_ready`(400) `proof_forbidden`(403) `proof_purpose_mismatch`(400) `proof_wish_mismatch`(400) `checkin_rate_limited`(429 + `retryAfterSeconds`，`CHECKIN_PER_MINUTE` 默认 10/分钟) `checkin_conflict`(409) `idempotency_key_reuse`(409) |
 | `POST /api/tasks/:id/makeup` | Bearer | `task.makeup` / **optional** / 1024 | `{ proof_id(uuid，必填), note?`text 0..30` }` | `{ task:Task(status:"made_up"), checkin:Checkin(is_makeup:true), ticket:MakeupTicket(status:"used"), no_penalty:true }` | 上述任务/图片/权限类错误，另加 `already_made_up`(400) `task_not_missed`(400 + `details.status`) `makeup_window_closed`(400 + `details.task_week_start/current_week_start`) `makeup_ticket_unavailable`(400 + `details.week_start`) `makeup_ticket_expired`(400) `task_state_conflict`(409，补偿后重试) |
@@ -127,7 +128,7 @@
 
 | 方法 · 路径 | 鉴权 | `operation` / `idempotent` / `maxBodyBytes` | 入参 | 出参 `data` | 特有错误码 |
 | --- | --- | --- | --- | --- | --- |
-| `GET /api/wishes/:id/ledger` | Bearer | `wish.ledger` / none / 0 | path `id` = 愿签 uuid；query `week_start?` = 契约内某个周一 `YYYY-MM-DD`（缺省当前周） | `{ wish_id, week:LedgerWeek, weeks:[LedgerWeek], totals:LedgerTotals, progress:LedgerProgress }`；只含金额与进度，**绝不返回礼物名称、价格、匹配结果** | `invalid_parameter`(400，id / week_start 非法或非周一) `wish_not_active`(400，未立契/已结束) `week_not_in_contract`(400) `wish_forbidden`(403，非作者) `wish_not_found`(404) |
+| `GET /api/wishes/:id/ledger` | Bearer | `wish.ledger` / none / 0 | path `id` = 愿签 uuid；query `week_start?` = 契约内某个周一 `YYYY-MM-DD`（缺省当前周） | `{ wish_id, week:LedgerWeek, weeks:[LedgerWeek], entries:[LedgerEntry], totals:LedgerTotals, progress:LedgerProgress }`；只含金额、流水与进度，**绝不返回礼物名称、价格、匹配结果** | `invalid_parameter`(400，id / week_start 非法或非周一) `wish_not_active`(400，未立契/已结束) `week_not_in_contract`(400) `wish_forbidden`(403，非作者) `wish_not_found`(404) |
 | `PUT /api/ledger/weeks/:weekStart` | Bearer | `ledger.set_week_budget` / **optional** / 1024 | path `weekStart` = 周一；body `{ wish_id(uuid，必填), budget_cents(整数分，0..200000，必填) }`；只改当前及未来周 | `{ week:LedgerWeek, totals:LedgerTotals, progress:LedgerProgress, notice }`；修改当周立即生效 | `invalid_parameter`(400) `wish_not_active`(400) `week_not_in_contract`(400) `week_not_editable`(400，历史周) `wish_forbidden`(403) `wish_not_found`(404) `ledger_week_conflict`(409，CAS 冲突) `idempotency_key_reuse`(409) |
 | `POST /api/ledger/entries` | Bearer | `ledger.add_entry` / **optional** / 2048 | body `{ wish_id(uuid，必填), week_start(周一), type:"expense"\|"earning", amount_cents(整数分), note?≤60, proof_id?uuid, task_id?uuid }`；支出 0..200000，收入 1..100000 且 task_id 必填 | `{ entry:LedgerEntry, week:LedgerWeek, totals:LedgerTotals, progress:LedgerProgress, notice }`；流水只追加，不提供修改/删除 | `invalid_parameter`(400) `wish_not_active`(400) `week_not_in_contract`(400) `week_not_started`(400，未来周) `earning_task_required`(400) `earning_task_not_done`(400) `earning_week_mismatch`(400) `duplicate_earning_link`(400) `proof_not_found`/`proof_not_ready`/`proof_purpose_mismatch`/`proof_wish_mismatch`(400) `wish_forbidden`/`proof_forbidden`/`task_forbidden`(403) `wish_not_found`/`task_not_found`(404) `idempotency_key_reuse`(409) `ledger_entry_failed`(409) |
 

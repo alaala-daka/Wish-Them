@@ -1,6 +1,6 @@
 # 12 · 前端对接手册
 
-> 对应后端：第 9 轮最终版（41 条路由，`{origin}/functions/v1/app`）。字段级契约以 [04-api-contract.md](../docs/04-api-contract.md) 为准；本文给前端「怎么接、按什么顺序、哪些坑不能踩」。
+> 对应后端：第 9 轮最终版 + 联调补充（42 条路由，`{origin}/functions/v1/app`）。字段级契约以 [04-api-contract.md](../docs/04-api-contract.md) 为准；本文给前端「怎么接、按什么顺序、哪些坑不能踩」。
 
 ## 1. 基础配置
 
@@ -160,6 +160,10 @@ const signed = await api<ContractResult>(`/api/wishes/${wish.id}/contract`, {
 ```ts
 const today = await api<TodayView>(`/api/wishes/${wishId}/tasks/today`, { token });
 // today.tasks[].checkin 为 null 或打卡记录；today.makeup_ticket 为当前周券
+
+// 账本、结算、历史记录需要整份任务表时（今日接口只回当天）：
+const all = await api<TaskListView>(`/api/wishes/${wishId}/tasks`, { token });
+// all.tasks[].checkin 同样是 null 或打卡记录；可按 ?date=YYYY-MM-DD 过滤
 ```
 
 - 今日页只回当天任务；**漏卡不会实时变红**，下次打开今日页时服务端才把过期 `pending` 标 `missed`。
@@ -175,6 +179,7 @@ const today = await api<TodayView>(`/api/wishes/${wishId}/tasks/today`, { token 
 
 ```ts
 const ledger = await api<LedgerView>(`/api/wishes/${wishId}/ledger?week_start=2026-05-18`, { token });
+// ledger.weeks 是周汇总，ledger.entries 是契约期内的流水明细（按创建时间升序）
 await api(`/api/ledger/weeks/${weekStart}`, {
   method: 'PUT', token,
   body: JSON.stringify({ wish_id: wishId, budget_cents: 6000 }),

@@ -340,6 +340,8 @@ export interface LedgerView {
   wish_id: string;
   week: LedgerWeekView;
   weeks: LedgerWeekView[];
+  /** 契约期内的流水，按创建时间升序；只追加，不提供修改/删除 */
+  entries: Record<string, unknown>[];
   totals: LedgerTotalsView;
   progress: LedgerProgressView;
 }
@@ -409,7 +411,19 @@ export async function readLedger(
     contract_weeks: contract.weeks.length,
     message: progressMessage(selected),
   };
-  return { wish_id: String(wish.id), week: selected, weeks, totals, progress };
+  const contractWeeks = new Set(contract.weeks);
+  const visibleEntries = entries
+    .filter((entry) => contractWeeks.has(String(entry.week_start)))
+    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+    .map(toLedgerEntryDto);
+  return {
+    wish_id: String(wish.id),
+    week: selected,
+    weeks,
+    entries: visibleEntries,
+    totals,
+    progress,
+  };
 }
 
 function clampWeek(week: string, start: string, end: string): string {
