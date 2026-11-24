@@ -19,6 +19,7 @@ import listWishes, { route as wishListRoute } from './wishes/get.ts';
 import readWish, { route as wishReadRoute } from './wishes/param-id/get.ts';
 import saveAnswers, { route as wishAnswersRoute } from './wishes/param-id/answers.ts';
 import signContract, { route as wishContractRoute } from './wishes/param-id/contract.ts';
+import wishTasks, { route as wishTasksRoute } from './wishes/param-id/tasks/get.ts';
 import wishTodayTasks, { route as wishTodayTasksRoute } from './wishes/param-id/tasks/today.ts';
 import wishSettle, { route as wishSettleRoute } from './wishes/param-id/settle.ts';
 import wishSettlement, { route as wishSettlementRoute } from './wishes/param-id/settlement.ts';
@@ -62,6 +63,7 @@ export const routes: RouteModule[] = [
   { route: wishReadRoute, default: readWish },
   { route: wishAnswersRoute, default: saveAnswers },
   { route: wishContractRoute, default: signContract },
+  { route: wishTasksRoute, default: wishTasks },
   { route: wishTodayTasksRoute, default: wishTodayTasks },
   { route: wishSettleRoute, default: wishSettle },
   { route: wishSettlementRoute, default: wishSettlement },

@@ -1,6 +1,7 @@
 # 14 · 最终回归测试报告
 
 > 被测版本：第 9 轮最终交付（41 条路由 / 7 个迁移 / 3 份 seed）
+> 2026-11-24 前后端联调补充：新增 `GET /api/wishes/:id/tasks`（第 42 条路由），由 `tests/browser_smoke.py` 覆盖；原 470 项断言仍全部通过。
 > 测试日期：2026-11-22
 > 结论：**470 / 470 通过，通过率 100%；四个结构校验器全绿；无产品缺陷阻塞交付。**
 
@@ -56,7 +57,7 @@
 | 14 | 上传/分享/公开池/回信 | 101 | presign 白名单/大小、真实 PUT 字节、magic bytes、CAS ready、2h 过期与惰性清扫、600s URL、分享轮换/撤销/白名单、公开池发布/举报隐藏/下架、回信日限/敏感词/删除权限、四个窗口限流 |
 | 15 | AI/演示模式 | 42 | 模板 3 条 + 标签、只读不写、脱敏、agent/缓存/额度/超时/坏输出、AI 幂等、演示基线/快进/三结局/重置/过期/本 IP 最早 3 条清理 |
 | 16 | `API_PER_MINUTE` 兜底限流 | 2 | 健康探针豁免、同主体第 3 次 429 + `retry-after` |
-| **合计** | | **466 / 470** | **41 条路由全覆盖** |
+| **合计** | | **466 / 470** | **原 41 条路由全覆盖；新增任务列表路由由浏览器验收覆盖** |
 
 ## 4. 路由覆盖矩阵
 
@@ -93,7 +94,7 @@
 
 | 命令 | 结果 |
 | --- | --- |
-| `node tools/scripts/check-routes.ts` | `manifest.ts 登记 41 条路由`；路径↔文件位置、route 字段、operation 唯一性全部通过；`✓ 路由表自洽` |
+| `node tools/scripts/check-routes.ts` | `manifest.ts 登记 42 条路由`；路径↔文件位置、route 字段、operation 唯一性全部通过；`✓ 路由表自洽` |
 | `node tools/scripts/check-migrations.ts` | `扫描 7 个文件、98 条语句，表 22 张`；`✓ 全部语句都在平台迁移子集内` |
 | `node tools/scripts/check-schema-usage.ts` | `迁移脚本：22 张表、349 列；扫描 78 个 Function 源码文件`；4 处表达式表名/展开写法静态跳过并已在冒烟覆盖；`✓ DAO 引用的表与列都在迁移脚本里` |
 | `node tools/scripts/build-seeds.ts --check` | `seed 形状校验通过：wish_templates 72、task_templates 120、rewards 24` |

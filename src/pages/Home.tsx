@@ -21,9 +21,13 @@ export function Home({ data }: Props) {
             </p>
             <button
               className="primary hero-button"
-              onClick={() => go(data.wish ? '/today' : '/start')}
+              onClick={() => go(data.wish && data.wish.status !== 'settled' ? '/today' : '/start')}
             >
-              {data.wish ? '继续今天的小事' : '替TA许个愿'}
+              {data.wish && data.wish.status !== 'settled'
+                ? '继续今天的小事'
+                : data.wish
+                  ? '再许一个愿'
+                  : '替TA许个愿'}
             </button>
             <button className="secondary" onClick={() => go('/pool')}>
               看看大家的愿望

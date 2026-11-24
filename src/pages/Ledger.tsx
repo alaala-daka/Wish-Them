@@ -1,59 +1,66 @@
 import { useState } from 'react';
-import { Plus, BookOpen, X } from 'lucide-react';
-import { productDay, totals, weekStart, type LedgerEntry } from '../domain';
+import { Plus, BookOpen } from 'lucide-react';
+import { productDay, weekStart, type LedgerEntry } from '../domain';
 import { Heading, Paper } from '../components';
 import NoWish from './NoWish';
 import type { Props } from './types';
 
-export function Ledger({ data, update, notify }: Props) {
+const kindLabel = (kind: LedgerEntry['kind']) =>
+  kind === 'budget' ? '周预算' : kind === 'expense' ? '非必要支出' : '兼职收入';
+
+export function Ledger({ data, notify, isDemo, actions }: Props) {
   const [kind, setKind] = useState<LedgerEntry['kind']>('expense'),
     [amount, setAmount] = useState(''),
     [note, setNote] = useState(''),
     [taskId, setTaskId] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
-  const t = totals(data.ledger),
+  const summary = data.ledgerTotals ?? { saved: 0, earned: 0, total: 0 },
     week = weekStart(productDay());
   const moneyTasks =
     data.wish?.tasks.filter(
-      (t) => t.kind === 'money' && data.checkins.some((c) => c.taskId === t.id),
+      (task) =>
+        task.kind === 'money' &&
+        (task.status === 'done' || task.status === 'made_up') &&
+        weekStart(task.date) === week,
     ) || [];
+  const settled = data.wish?.status === 'settled';
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const n = Number(amount);
-    if (!amount || !Number.isFinite(n) || n < 0 || n > 100000 || (kind === 'income' && !taskId)) {
-      setError('请填写0至100000之间的金额；收入需关联已记录的钱任务。');
+    const yuan = Number(amount);
+    if (!amount || !Number.isFinite(yuan) || yuan < 0 || !Number.isInteger(yuan)) {
+      setError('请填写整数金额（元）。');
+      return;
+    }
+    const cents = Math.round(yuan * 100);
+    if (kind === 'income' && (cents < 100 || !taskId)) {
+      setError('兼职收入至少 1 元，并需关联本愿签已完成的钱任务。');
+      return;
+    }
+    if (kind !== 'income' && cents > 200_000) {
+      setError('单笔预算或支出不能超过 2000 元。');
+      return;
+    }
+    if (kind === 'income' && cents > 100_000) {
+      setError('单笔收入不能超过 1000 元。');
       return;
     }
     setBusy(true);
+    setError('');
     try {
-      const row: LedgerEntry = {
-        id: crypto.randomUUID(),
-        week,
-        kind,
-        amount: Math.round(n),
-        note:
-          note.trim() ||
-          (kind === 'budget' ? '本周预算' : kind === 'income' ? '兼职收入' : '非必要支出'),
-        taskId: kind === 'income' ? taskId : undefined,
-      };
-      await update((d) => ({
-        ...d,
-        ledger: [
-          ...d.ledger.filter((x) => !(kind === 'budget' && x.kind === 'budget' && x.week === week)),
-          row,
-        ],
-      }));
+      if (kind === 'budget') await actions.setWeekBudget(cents);
+      else await actions.addLedgerEntry(kind, cents, note, kind === 'income' ? taskId : undefined);
       setAmount('');
       setNote('');
-      setError('');
       notify('这一笔，已记到账本。');
-    } catch {
-      setError('账目没有保存，请重试。');
+    } catch (e) {
+      setError((e as Error).message || '账目没有保存，请重试。');
     } finally {
       setBusy(false);
     }
   }
+
   if (!data.wish)
     return (
       <div className="page">
@@ -70,15 +77,15 @@ export function Ledger({ data, update, notify }: Props) {
       <div className="ledger-summary">
         <Paper>
           <span>累计省下</span>
-          <strong>¥{t.saved}</strong>
+          <strong>¥{summary.saved}</strong>
         </Paper>
         <Paper>
           <span>累计挣到</span>
-          <strong>¥{t.earned}</strong>
+          <strong>¥{summary.earned}</strong>
         </Paper>
         <Paper className="total">
           <span>累计心意</span>
-          <strong>¥{t.total}</strong>
+          <strong>¥{summary.total}</strong>
         </Paper>
       </div>
       <div className="two-column">
@@ -87,42 +94,25 @@ export function Ledger({ data, update, notify }: Props) {
             <h2>我的账页</h2>
             <span className="tag">按自然周记录</span>
           </div>
-          <p className="muted">每周省下 = 预算 − 非必要支出，最低为0元。</p>
+          <p className="muted">
+            每周省下 = 预算 − 非必要支出，最低为0元。支出超过预算会提示，但不会拦截提交。
+          </p>
           {data.ledger.length ? (
-            [...new Set(data.ledger.map((e) => e.week))]
+            [...new Set(data.ledger.map((entry) => entry.week))]
               .sort()
               .reverse()
               .map((w) => (
                 <div key={w} className="ledger-week">
                   <h3>{w} 起的一周</h3>
                   {data.ledger
-                    .filter((e) => e.week === w)
-                    .map((e) => (
-                      <div className="ledger-row" key={e.id}>
+                    .filter((entry) => entry.week === w)
+                    .map((entry) => (
+                      <div className="ledger-row" key={entry.id}>
                         <div>
-                          <strong>{e.note}</strong>
-                          <span>
-                            {e.kind === 'budget'
-                              ? '周预算'
-                              : e.kind === 'expense'
-                                ? '非必要支出'
-                                : '兼职收入'}
-                          </span>
+                          <strong>{entry.note}</strong>
+                          <span>{kindLabel(entry.kind)}</span>
                         </div>
-                        <b>¥{e.amount}</b>
-                        <button
-                          className="icon-button"
-                          aria-label={`删除${e.note}`}
-                          onClick={() => {
-                            if (window.confirm('删除这笔账目？'))
-                              void update((d) => ({
-                                ...d,
-                                ledger: d.ledger.filter((x) => x.id !== e.id),
-                              })).catch(() => notify('删除失败，请重试。'));
-                          }}
-                        >
-                          <X size={16} />
-                        </button>
+                        <b>¥{entry.amount}</b>
                       </div>
                     ))}
                 </div>
@@ -134,63 +124,73 @@ export function Ledger({ data, update, notify }: Props) {
               <p>先设一个周预算，再记录真实支出。</p>
             </div>
           )}
+          <p className="muted">流水只追加、不提供删除；如需更正金额，请再记录一笔并说明。</p>
         </Paper>
         <Paper>
           <h2>记下一笔</h2>
-          <form onSubmit={submit}>
-            <label>
-              记账类型
-              <select value={kind} onChange={(e) => setKind(e.target.value as LedgerEntry['kind'])}>
-                <option value="expense">非必要支出</option>
-                <option value="budget">设置本周预算</option>
-                <option value="income">兼职收入</option>
-              </select>
-            </label>
-            <label>
-              金额（元，取整）
-              <input
-                required
-                type="number"
-                min="0"
-                max="100000"
-                step="any"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </label>
-            <label>
-              记一点说明
-              <input
-                maxLength={30}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="例如：本周少喝两杯奶茶"
-              />
-            </label>
-            {kind === 'income' && (
+          {settled ? (
+            <p className="muted">这份约定已经结算，账本已归档，不能再追加记录。</p>
+          ) : isDemo ? (
+            <p className="muted">演示模式只读；退出演示后可以记账。</p>
+          ) : (
+            <form onSubmit={submit}>
               <label>
-                关联已完成的钱任务
-                <select required value={taskId} onChange={(e) => setTaskId(e.target.value)}>
-                  <option value="">请选择</option>
-                  {moneyTasks.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.date} · {t.title}
-                    </option>
-                  ))}
+                记账类型
+                <select
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value as LedgerEntry['kind'])}
+                >
+                  <option value="expense">非必要支出</option>
+                  <option value="budget">设置本周预算</option>
+                  <option value="income">兼职收入</option>
                 </select>
-                <small>先在今日页完成周末钱任务并上传佐证。</small>
               </label>
-            )}
-            {error && (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            )}
-            <button className="primary full" disabled={busy}>
-              <Plus size={17} />
-              {busy ? '正在记账…' : '记到账本'}
-            </button>
-          </form>
+              <label>
+                金额（元，取整）
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  max={kind === 'income' ? 1000 : 2000}
+                  step="1"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </label>
+              <label>
+                记一点说明
+                <input
+                  maxLength={30}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="例如：本周少喝两杯奶茶"
+                />
+              </label>
+              {kind === 'income' && (
+                <label>
+                  关联已完成的钱任务
+                  <select required value={taskId} onChange={(e) => setTaskId(e.target.value)}>
+                    <option value="">请选择</option>
+                    {moneyTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.date} · {task.title}
+                      </option>
+                    ))}
+                  </select>
+                  <small>先在今日页完成周末钱任务并上传佐证。</small>
+                </label>
+              )}
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <button className="primary full" disabled={busy}>
+                <Plus size={17} />
+                {busy ? '正在记账…' : '记到账本'}
+              </button>
+            </form>
+          )}
           <div className="drawer inline">
             <span>?</span>
             <p>

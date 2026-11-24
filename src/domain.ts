@@ -1,5 +1,13 @@
 export type TaskKind = 'ta' | 'self' | 'money';
-export type Task = { id: string; date: string; kind: TaskKind; title: string };
+export type TaskStatus = 'pending' | 'done' | 'missed' | 'made_up';
+export type Task = {
+  id: string;
+  date: string;
+  kind: TaskKind;
+  title: string;
+  status?: TaskStatus;
+  dayIndex?: number;
+};
 export type Wish = {
   id: string;
   relation: string;
@@ -14,8 +22,78 @@ export type Wish = {
   tasks: Task[];
   signature?: string;
   extended?: boolean;
+  days?: number;
+  endDate?: string;
+  wishType?: string;
 };
-export type Checkin = { taskId: string; image: string; note: string; at: string };
+export type Checkin = {
+  taskId: string;
+  image: string;
+  note: string;
+  at: string;
+  proofId?: string;
+  isMakeup?: boolean;
+};
+
+export type SettlementOutcome = 'double_realized' | 'cyber_only' | 'unrealized';
+export type SettlementView = {
+  wish_id: string;
+  settlement_version: number;
+  status: string;
+  first_act: {
+    outcome: SettlementOutcome;
+    outcome_label: string;
+    stamped: boolean;
+    settled_at: string;
+    progress_ratio_bps: number;
+    tasks: {
+      must_total: number;
+      must_done: number;
+      money_total: number;
+      money_done: number;
+      checkin_count: number;
+      makeup_count: number;
+      must_bps: number;
+      money_bps: number;
+      total: number;
+      done: number;
+    };
+    task_details: Array<{
+      id: string;
+      day_index: number;
+      task_date: string;
+      type: TaskKind;
+      title: string;
+      status: TaskStatus;
+      is_must: boolean;
+    }>;
+  };
+  second_act: {
+    realized_cents: number;
+    realized_yuan: number;
+    saved_cents: number;
+    earned_cents: number;
+    gift: {
+      id: string;
+      category: string;
+      title: string;
+      note: string;
+      min_cents: number;
+      max_cents: number;
+      min_yuan: number;
+      max_yuan: number;
+      price_median_cents: number;
+      price_median_yuan: number;
+    } | null;
+    gap_cents: number;
+    gap_yuan: number;
+    gap_band: 'exact' | 'near' | 'far';
+    gap_band_label: string;
+    copy_text: string;
+    letter_text: string;
+  };
+  extension: { can_extend: boolean; renew_count: number; extend_days: number; reason: string };
+};
 export type LedgerEntry = {
   id: string;
   week: string;
@@ -43,6 +121,15 @@ export type AppData = {
   replies: Record<string, string[]>;
   letter: string;
   celebration: boolean;
+  /** 服务端返回的愿签状态；wish.status 是页面使用的二值投影 */
+  wishStatus?: string;
+  settleOpenAt?: string;
+  settlement?: SettlementView;
+  /** 服务端汇总，避免前端重复推算「已计入周」的口径 */
+  ledgerTotals?: { saved: number; earned: number; total: number };
+  currentUser?: { id: string; nickname: string; isDemo?: boolean };
+  recoveryCode?: string;
+  makeupAvailable?: boolean;
 };
 export const relations = [
   '妈妈',
@@ -189,6 +276,16 @@ export function totals(entries: LedgerEntry[]) {
   const earned = entries.filter((e) => e.kind === 'income').reduce((s, e) => s + e.amount, 0);
   return { saved, earned, total: saved + earned };
 }
+/** 结算是否已开放：优先用服务端 settle_open_at，演示/本机数据回退到本地规则。 */
+export function settleDue(data: AppData, now = new Date()) {
+  if (data.settlement) return true;
+  if (data.settleOpenAt) {
+    const openAt = Date.parse(data.settleOpenAt);
+    if (!Number.isNaN(openAt)) return now.getTime() >= openAt;
+  }
+  return settlement(data, now).due;
+}
+
 export function settlement(data: AppData, now = new Date()) {
   const w = data.wish;
   if (!w) return { due: false, complete: false, outcome: 'unfinished' as const };
@@ -206,6 +303,83 @@ export function settlement(data: AppData, now = new Date()) {
         : ('cyber' as const),
   };
 }
+/** 后端演示不可用时的本机兜底：把本地规则结果投影成与接口一致的结算视图。 */
+export function localSettlementView(data: AppData, now = new Date()): SettlementView {
+  const result = settlement(data, now);
+  const tasks = data.wish?.tasks ?? [];
+  const done = (t: Task) => data.checkins.some((checkin) => checkin.taskId === t.id);
+  const must = tasks.filter((t) => t.kind !== 'money');
+  const money = tasks.filter((t) => t.kind === 'money');
+  const moneyDone = money.filter(done).length;
+  const mustDone = must.filter(done).length;
+  const outcome: SettlementOutcome =
+    result.outcome === 'full'
+      ? 'double_realized'
+      : result.outcome === 'cyber'
+        ? 'cyber_only'
+        : 'unrealized';
+  const amounts = totals(data.ledger);
+  return {
+    wish_id: data.wish?.id ?? 'demo',
+    settlement_version: 1,
+    status: 'settled',
+    first_act: {
+      outcome,
+      outcome_label:
+        outcome === 'double_realized'
+          ? '双重兑现'
+          : outcome === 'cyber_only'
+            ? '赛博实现'
+            : '未实现',
+      stamped: result.complete,
+      settled_at: new Date().toISOString(),
+      progress_ratio_bps: tasks.length
+        ? Math.round((data.checkins.length / tasks.length) * 10_000)
+        : 0,
+      tasks: {
+        must_total: must.length,
+        must_done: mustDone,
+        money_total: money.length,
+        money_done: moneyDone,
+        checkin_count: data.checkins.length,
+        makeup_count: 0,
+        must_bps: must.length ? Math.round((mustDone / must.length) * 10_000) : 0,
+        money_bps: money.length ? Math.round((moneyDone / money.length) * 10_000) : 0,
+        total: tasks.length,
+        done: mustDone + moneyDone,
+      },
+      task_details: tasks.map((task, index) => ({
+        id: task.id,
+        day_index: index,
+        task_date: task.date,
+        type: task.kind,
+        title: task.title,
+        status: done(task) ? 'done' : 'missed',
+        is_must: task.kind !== 'money',
+      })),
+    },
+    second_act: {
+      realized_cents: amounts.total * 100,
+      realized_yuan: amounts.total,
+      saved_cents: amounts.saved * 100,
+      earned_cents: amounts.earned * 100,
+      gift: null,
+      gap_cents: 0,
+      gap_yuan: 0,
+      gap_band: 'near',
+      gap_band_label: '差一点',
+      copy_text: '这份心意已经收好。等下一次见面，再慢慢告诉 TA。',
+      letter_text: `亲爱的${data.wish?.name ?? 'TA'}：\n有些关心一直没好好说出口。最近我做了一些小事，也慢慢学着照顾自己。愿你一直被认真惦记着。`,
+    },
+    extension: {
+      can_extend: outcome !== 'double_realized',
+      renew_count: 0,
+      extend_days: 7,
+      reason: '',
+    },
+  };
+}
+
 export function demoData(outcome: 'full' | 'cyber' | 'unfinished' = 'full'): AppData {
   const d = emptyData();
   const draft = { ...emptyDraft(), text: '希望妈妈的腿不再疼，每天都能轻轻松松地散步。' };

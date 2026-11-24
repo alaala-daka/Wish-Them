@@ -1180,6 +1180,73 @@ dialog::backdrop {
   z-index: 50;
   font-size: 14px;
 }
+.recovery-banner {
+  background: var(--red);
+  color: #fff6db;
+  padding: 10px 4%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.recovery-banner strong {
+  white-space: nowrap;
+}
+.recovery-banner span {
+  flex: 1;
+  min-width: 200px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.recovery-banner .icon-button {
+  color: #fff6db;
+  border-color: #fff6db88;
+}
+.missed-label {
+  color: var(--red);
+}
+.gift-note {
+  border: 1px dashed var(--line);
+  background: #fff6dc;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+.gift-note p {
+  margin: 6px 0;
+}
+.gift-note span {
+  font-size: 13px;
+  color: #6d5a4c;
+}
+.recovery-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  background: #fff7e4;
+}
+.recovery-code span {
+  width: 100%;
+  font-size: 13px;
+  color: #6d5a4c;
+}
+.recovery-code code {
+  flex: 1;
+  min-width: 180px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.recover-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+}
 .form-error {
   color: #a13228;
   font-size: 14px;

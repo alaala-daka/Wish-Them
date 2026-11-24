@@ -2,7 +2,7 @@
 
 > 2026 Qoder 高校创造力大赛 Hack4Good 赛道
 > 平台：Qoder Sites — Server Functions（Deno edge）+ Qoder Database + Object Storage + Cloud Agents
-> 依据：仓库根目录 `愿TA_PRD(1).pdf`（v1.2，2026-11-15）、`愿TA_产品方案.docx`
+> 依据：`愿TA_PRD(1).pdf`（v1.2，2026-11-15）、`愿TA_项目简介.docx`
 > 状态：**源码与本地验证完成；云端迁移 / seed / Function 发布待授权执行**（本轮未做任何云端写入）
 
 ## 一句话说明
@@ -26,7 +26,7 @@ node tools/scripts/diff-schema.ts
 
 ```
 470 passed, 0 failed
-41 条路由，✓ 路由表自洽
+42 条路由，✓ 路由表自洽
 7 文件 / 98 语句 / 22 表，✓ 平台迁移子集
 22 表 / 349 列 / 78 个源文件，✓ 代码↔DDL
 72 / 120 / 24，✓ seed 形状
@@ -34,14 +34,14 @@ node tools/scripts/diff-schema.ts
 
 装了 Deno 时可跑 `deno task verify`（含 `deno check backend/index.ts`）。**本机没有 Deno，本轮未执行类型检查**；部署前应在有 Deno 的环境补跑。
 
-## 已实现能力（41 条路由）
+## 已实现能力（42 条路由）
 
 物理前缀固定 `{origin}/functions/v1/app`，逻辑路径如下。
 
 | 模块 | 路由 |
 | --- | --- |
 | 系统与账号（7） | `GET /api/health`、`GET /api/health/deep`、`POST /api/auth/guest`、`POST /api/auth/recover`、`POST /api/auth/logout`、`GET /api/me`、`PATCH /api/me` |
-| 愿签与契约（5） | `POST /api/wishes`、`GET /api/wishes`、`GET /api/wishes/:id`、`PUT /api/wishes/:id/answers`、`POST /api/wishes/:id/contract` |
+| 愿签与契约（6） | `POST /api/wishes`、`GET /api/wishes`、`GET /api/wishes/:id`、`PUT /api/wishes/:id/answers`、`POST /api/wishes/:id/contract`、`GET /api/wishes/:id/tasks` |
 | 每日任务与补卡（3） | `GET /api/wishes/:id/tasks/today`、`POST /api/tasks/:id/checkin`、`POST /api/tasks/:id/makeup` |
 | 账本（3） | `GET /api/wishes/:id/ledger`、`PUT /api/ledger/weeks/:weekStart`、`POST /api/ledger/entries` |
 | 结算与续期（3） | `POST /api/wishes/:id/settle`、`GET /api/wishes/:id/settlement`、`POST /api/wishes/:id/extend` |
@@ -70,7 +70,7 @@ node tools/scripts/diff-schema.ts
 backend/
   index.ts            # 唯一 Deno.serve 入口（平台注入 _qoder/*）
   server.ts           # 分发、鉴权、限流、错误封套、安全头
-  manifest.ts         # 唯一路由登记表（41 条）
+  manifest.ts         # 唯一路由登记表（42 条）
   api/                # 按模块的文件即路由
   domain/             # 纯业务规则（wish/task/checkin/ledger/settlement/upload/share/pool/reply/ai/demo）
   lib/                # config/validate/auth/crypto/time/quota/idempotency/respond/log/rate-limit
@@ -90,7 +90,7 @@ docs/                 # 交付文档（见下）
 | [docs/01-architecture.md](docs/01-architecture.md) | 运行形态、平台约束 → 设计决策、分层职责、鉴权、确定性规则、无事务一致性、隐私白名单、限流与密钥、发布流程、非功能目标、18 条风险 |
 | [docs/02-conventions.md](docs/02-conventions.md) | 响应信封、状态码、`errorCode` 总表、Bearer、幂等、时间/金额/枚举、加密、公开出口、分页、响应头、兼容规则 |
 | [docs/03-database.md](docs/03-database.md) | 22 张表逐列说明、迁移子集、唯一约束↔业务约束、索引用途、与设计稿差异、未做与并发边界 |
-| [docs/04-api-contract.md](docs/04-api-contract.md) | **最终接口契约**：41 条已实现接口、全局约定、errorCode、幂等矩阵、限流表、安全与隐私、分模块 curl |
+| [docs/04-api-contract.md](docs/04-api-contract.md) | **最终接口契约**：42 条已实现接口、全局约定、errorCode、幂等矩阵、限流表、安全与隐私、分模块 curl |
 | [docs/05-environment.md](docs/05-environment.md) | Secrets 与全部环境变量、轮换策略、本地运行、线上开通顺序、未验证清单 |
 | [docs/06–10 · 第 4–8 轮总结](docs/10-round8-summary.md) | 各轮实现范围、偏差、测试与风险 |
 | [docs/11-deployment.md](docs/11-deployment.md) | **部署手册**：dev/staging/prod、迁移与 seed、Function 发布、域名/HTTPS、验收清单、回滚、排障 |
@@ -113,7 +113,7 @@ docs/                 # 交付文档（见下）
 
 | 项 | 状态 |
 | --- | --- |
-| 工程骨架 / 41 条路由 | ✅ 本地行为全绿 |
+| 工程骨架 / 42 条路由 | ✅ 本地行为全绿 |
 | 迁移 0001–0007 | ✅ 静态校验；⚠️ 云端执行状态以 `get_database_schema` 为准，0007 需单独核对 |
 | seed 72/120/24 | ✅ 形状校验；⚠️ 云端导入未确认 |
 | Function / 站点发布 | ⚠️ 源码就绪；本轮未部署、未发布 |
@@ -142,4 +142,4 @@ docs/                 # 交付文档（见下）
 
 ## 参考资料
 
-原始需求与方案见仓库根目录 `愿TA_PRD(1).pdf` 与 `愿TA_产品方案.docx`。
+原始需求与方案见 `愿TA_PRD(1).pdf` 与 `愿TA_项目简介.docx`。
