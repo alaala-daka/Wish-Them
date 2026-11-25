@@ -171,6 +171,8 @@ export type TaskDto = {
   proof_kind: string;
   time_slot: string;
   min_budget_cents: number;
+  tags: string[];
+  money_kind: 'save' | 'earn' | '';
   rotation: number;
   checkin?: CheckinDto | null;
 };
@@ -180,6 +182,8 @@ export type CheckinDto = {
   task_id: string;
   proof_id: string | null;
   note: string;
+  amount_cents: number | null;
+  amount_kind: 'saved' | 'earned' | '';
   is_makeup: boolean;
   channel: string;
   checkin_date: string;
@@ -201,6 +205,8 @@ export type LedgerWeekDto = {
   spent_yuan: number;
   income_cents: number;
   income_yuan: number;
+  task_saved_cents: number;
+  task_saved_yuan: number;
   balance_cents: number;
   balance_yuan: number;
   over_budget: boolean;
@@ -212,7 +218,7 @@ export type LedgerEntryDto = {
   id: string;
   wish_id: string;
   week_start: string;
-  type: 'expense' | 'earning';
+  type: 'expense' | 'earning' | 'saved';
   amount_cents: number;
   amount_yuan: number;
   note: string;
@@ -233,6 +239,8 @@ export type LedgerViewDto = {
     budget_cents: number;
     spent_cents: number;
     saved_cents: number;
+    budget_balance_cents: number;
+    task_saved_cents: number;
     income_cents: number;
     realized_cents: number;
     current_week_start: string;
@@ -295,40 +303,6 @@ export type ReplyDto = {
   created_at: string;
 };
 
-export type DemoStateDto = {
-  demo: {
-    session_id: string;
-    scenario: string;
-    mode: string;
-    step: number;
-    ttl_hours: number;
-    expires_at: string;
-    is_completed: boolean;
-    server_now: string;
-  };
-  persona: { label: string; relation: string; pronoun: string; wish_text: string; preset: string };
-  wish: WishDto;
-  progress: Record<string, number>;
-  today_tasks: TaskDto[];
-  tasks: TaskDto[];
-  ledger: LedgerViewDto | null;
-  settlement: import('./domain').SettlementView | null;
-  settle_open_at: string;
-};
-
-export type DemoSessionResult = {
-  session: {
-    demo_session_id: string;
-    access_token: string;
-    token_type: 'Bearer';
-    expires_at: string;
-    expires_in_seconds: number;
-  };
-  user: UserDto;
-  persona: DemoStateDto['persona'];
-  state: DemoStateDto;
-};
-
 export const guest = (nickname?: string) =>
   api<GuestResult>('/api/auth/guest', {
     body: { nickname, channel: 'other' },
@@ -366,14 +340,19 @@ export const createWish = (
     body: input,
   });
 
-export const saveAnswers = (token: string, id: string, answers: Record<string, string>) =>
+export const saveAnswers = (
+  token: string,
+  id: string,
+  answers: Record<string, string>,
+  meta?: Record<string, string>,
+) =>
   api<{ answered: string[]; five_questions_done: boolean }>(`/api/wishes/${id}/answers`, {
     method: 'PUT',
     token,
-    body: answers,
+    body: { ...answers, meta },
   });
 
-export const signContract = (token: string, id: string, days = 7) =>
+export const signContract = (token: string, id: string, days = 10) =>
   api<{
     wish: WishDto;
     tasks: TaskDto[];
@@ -425,16 +404,32 @@ export const addLedgerEntry = (
   },
 ) => api<{ entry: LedgerEntryDto }>('/api/ledger/entries', { token, body: input });
 
-export const checkinTask = (token: string, taskId: string, proofId: string, note: string) =>
+export const checkinTask = (
+  token: string,
+  taskId: string,
+  proofId: string,
+  note: string,
+  amountCents?: number,
+) =>
   api<{ task: TaskDto; checkin: CheckinDto }>(`/api/tasks/${taskId}/checkin`, {
     token,
-    body: { proof_id: proofId, note },
+    body: amountCents === undefined
+      ? { proof_id: proofId, note }
+      : { proof_id: proofId, note, amount_cents: amountCents },
   });
 
-export const makeupTask = (token: string, taskId: string, proofId: string, note: string) =>
+export const makeupTask = (
+  token: string,
+  taskId: string,
+  proofId: string,
+  note: string,
+  amountCents?: number,
+) =>
   api<{ task: TaskDto; checkin: CheckinDto }>(`/api/tasks/${taskId}/makeup`, {
     token,
-    body: { proof_id: proofId, note },
+    body: amountCents === undefined
+      ? { proof_id: proofId, note }
+      : { proof_id: proofId, note, amount_cents: amountCents },
   });
 
 export const settleWish = (token: string, wishId: string) =>
@@ -446,13 +441,13 @@ export const settleWish = (token: string, wishId: string) =>
 export const getSettlement = (token: string, wishId: string) =>
   api<import('./domain').SettlementView>(`/api/wishes/${wishId}/settlement`, { token });
 
-export const extendWish = (token: string, wishId: string) =>
-  api<{ wish: WishDto; new_end_date: string; added_tasks: number }>(
+export const extendWish = (token: string, wishId: string, days: number) =>
+  api<{ wish: WishDto; new_end_date: string; days: number; added_tasks: number }>(
     `/api/wishes/${wishId}/extend`,
     {
       method: 'POST',
       token,
-      body: {},
+      body: { days },
     },
   );
 
@@ -482,17 +477,6 @@ export const createReply = (token: string, postId: string, content: string) =>
   api<{ reply: ReplyDto; post: { reply_count: number }; quota: { daily_remaining: number } }>(
     `/api/pool/${postId}/replies`,
     { token, body: { content } },
-  );
-
-export const demoSession = () => api<DemoSessionResult>('/api/demo/session', { body: {} });
-
-export const demoScenario = (token: string, outcome: 'double_realized' | 'cyber_only' | 'failed') =>
-  api<{ state: DemoStateDto; settlement: import('./domain').SettlementView }>(
-    '/api/demo/scenario',
-    {
-      token,
-      body: { outcome },
-    },
   );
 
 /** 两段式上传：presign → 对象存储 PUT → complete，返回可被业务接口引用的 file_id。 */

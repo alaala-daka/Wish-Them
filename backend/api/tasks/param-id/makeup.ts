@@ -18,7 +18,7 @@
  *       404 task_not_found / 404 wish_not_found / 409 task_state_conflict /
  *       409 idempotency_key_reuse
  */
-import { internal } from '../../../lib/errors.ts';
+import { badRequest, internal } from '../../../lib/errors.ts';
 import { ok } from '../../../lib/respond.ts';
 import { parseUuidParam, validate, type FieldSpec } from '../../../lib/validate.ts';
 import { makeUpTask, requireTaskAuthor, toCheckinDto, toMakeupTicketDto } from '../../../domain/checkin.ts';
@@ -37,6 +37,7 @@ export const route: RouteDef = {
 const BODY: Record<string, FieldSpec> = {
   proof_id: { type: 'uuid', required: true },
   note: { type: 'text', min: 0, max: 30 },
+  amount_cents: { type: 'money', min: 1, maxCents: 200_000 },
 };
 
 export default async function taskMakeup(ctx: Ctx): Promise<Response> {
@@ -46,9 +47,15 @@ export default async function taskMakeup(ctx: Ctx): Promise<Response> {
   const body = validate<Record<string, unknown>>(ctx.body, BODY);
   const proofId = String(body.value.proof_id);
   const note = body.value.note === undefined ? '' : String(body.value.note);
+  const amountCents = body.value.amount_cents === undefined ? undefined : Number(body.value.amount_cents);
 
   const { task, wish } = await requireTaskAuthor(ctx.db, taskId, principal.userId);
-  const result = await makeUpTask(ctx.db, principal, task, wish, { proofId, note }, ctx.now);
+  if (String(task.side ?? '') === 'money' && amountCents === undefined) {
+    throw badRequest('amount_required', '金钱任务需要填写这次实际省下或挣到的金额。', {
+      fields: { amount_cents: 'required for money task' },
+    });
+  }
+  const result = await makeUpTask(ctx.db, principal, task, wish, { proofId, note, amountCents }, ctx.now);
   return ok({
     task: toTaskDto(result.task),
     checkin: toCheckinDto(result.checkin),

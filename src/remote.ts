@@ -17,7 +17,6 @@ import {
   listWishes,
   me,
   type CheckinDto,
-  type DemoStateDto,
   type LedgerEntryDto,
   type LedgerViewDto,
   type TaskDto,
@@ -73,6 +72,9 @@ export function mapTask(task: TaskDto): Task {
     title: task.title,
     status: task.status,
     dayIndex: task.day_index,
+    tags: task.tags ?? [],
+    moneyKind: task.money_kind === 'save' || task.money_kind === 'earn' ? task.money_kind : undefined,
+    amountCents: task.checkin?.amount_cents ?? undefined,
   };
 }
 
@@ -103,6 +105,8 @@ export function mapCheckin(c: CheckinDto, image: string): Checkin {
     at: c.server_ts,
     proofId: c.proof_id ?? undefined,
     isMakeup: c.is_makeup,
+    amountCents: c.amount_cents ?? undefined,
+    amountKind: c.amount_kind === 'saved' || c.amount_kind === 'earned' ? c.amount_kind : undefined,
   };
 }
 
@@ -138,9 +142,9 @@ export function mapLedgerEntry(entry: LedgerEntryDto): LedgerEntry {
   return {
     id: entry.id,
     week: entry.week_start,
-    kind: entry.type === 'expense' ? 'expense' : 'income',
+    kind: entry.type === 'expense' ? 'expense' : entry.type === 'saved' ? 'saved' : 'income',
     amount: Math.floor(entry.amount_cents / 100),
-    note: entry.note || (entry.type === 'expense' ? '非必要支出' : '兼职收入'),
+    note: entry.note || (entry.type === 'expense' ? '非必要支出' : entry.type === 'saved' ? '任务省下' : '兼职收入'),
     taskId: entry.task_id ?? undefined,
   };
 }
@@ -226,44 +230,6 @@ export async function loadRemoteSnapshot(token: string): Promise<RemoteSnapshot>
     settlement,
     makeupAvailable,
     currentUser: base.currentUser,
-  };
-}
-
-/** 演示会话状态 → 页面视图。演示 token 只读，写入操作在页面层禁用。 */
-export function mapDemoState(state: DemoStateDto): AppData {
-  const wish = mapWish(state.wish, state.tasks);
-  const checkins: Checkin[] = state.tasks
-    .filter((task) => task.status === 'done' || task.status === 'made_up')
-    .map((task) => ({
-      taskId: task.id,
-      image: '/assets/postoffice.png',
-      note: '演示记录',
-      at: task.task_date,
-    }));
-  const mapped = mapLedger(state.ledger);
-  return {
-    version: 1,
-    wish,
-    draft: {
-      step: 0,
-      question: 0,
-      relation: wish.relation,
-      name: wish.name,
-      pronoun: wish.pronoun,
-      text: wish.text,
-      answers: ['', '', '', '', ''],
-      ai: false,
-    },
-    checkins,
-    ledger: mapped.ledger,
-    replies: {},
-    letter: state.settlement?.second_act.letter_text ?? '',
-    celebration: false,
-    wishStatus: state.wish.status,
-    settleOpenAt: state.settle_open_at,
-    settlement: state.settlement ?? undefined,
-    ledgerTotals: mapped.ledgerTotals,
-    currentUser: { id: 'demo', nickname: '体验官', isDemo: true },
   };
 }
 

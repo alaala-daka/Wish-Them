@@ -76,6 +76,12 @@ export function loadConfig(): AppConfig {
     // 未配置端点时只走模板兜底；本地/比赛演示都无需外部服务
     aiAgentEndpoint: readEnv('AI_AGENT_ENDPOINT') ?? '',
     aiAgentToken: readEnv('AI_AGENT_TOKEN') ?? '',
+    // DeepSeek 彩蛋：密钥为空时只走预设文案；端点/模型都可用环境变量覆盖
+    deepseekApiKey: readEnv('DEEPSEEK_API_KEY') ?? '',
+    deepseekBaseUrl: (readEnv('DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com/v1').replace(/\/$/, ''),
+    deepseekModel: readEnv('DEEPSEEK_MODEL') ?? 'deepseek-chat',
+    aiEasterEggEnabled: boolEnv('AI_EASTER_EGG_ENABLED', true),
+    aiEasterEggTimeoutMs: intEnv('AI_EASTER_EGG_TIMEOUT_MS', 7000, 1000, 30_000),
     wishCreatePerDay: intEnv('WISH_CREATE_PER_DAY', 20, 1, SCAN_LIMIT),
     checkinPerMinute: intEnv('CHECKIN_PER_MINUTE', 10, 1, SCAN_LIMIT),
     uploadPerHour: intEnv('UPLOAD_PER_HOUR', 30, 1, SCAN_LIMIT),

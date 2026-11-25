@@ -376,34 +376,34 @@ let secondWishId = '';
 
 // 10c 签署契约与任务引擎
 {
-  const incomplete = await postContract(secondWishId, { days: 7 });
+  const incomplete = await postContract(secondWishId, { days: 10 });
   check('五问未答完就签署 → 400 answers_incomplete', incomplete.status === 400 && incomplete.envelope.errorCode === 'answers_incomplete', incomplete.envelope);
   check('answers_incomplete 指出缺哪几问', JSON.stringify((incomplete.envelope.details as Data)?.missing) === '["q1","q2","q3","q4","q5"]', incomplete.envelope.details);
   const badDays = await postContract(wishId, { days: 5 });
-  check('days 非 7/14/30 → 400 invalid_parameter', badDays.status === 400 && badDays.envelope.errorCode === 'invalid_parameter', badDays.envelope);
-  const stringDays = await postContract(wishId, { days: '7' });
+  check('days 非 10 → 400 invalid_parameter', badDays.status === 400 && badDays.envelope.errorCode === 'invalid_parameter', badDays.envelope);
+  const stringDays = await postContract(wishId, { days: '10' });
   check('days 传字符串 → 400', stringDays.status === 400, stringDays.envelope);
   const foreign = await postContract(wishId, {}, strangerToken);
   check('非作者签署 → 403 wish_forbidden', foreign.status === 403 && foreign.envelope.errorCode === 'wish_forbidden', foreign.envelope);
 
-  const signed = await postContract(wishId, { days: 7 });
+  const signed = await postContract(wishId, { days: 10 });
   const signedWish = data(signed).wish as Data;
   const tasks = data(signed).tasks as Data[];
   const startDate = String(signedWish?.start_date ?? '');
   const endDate = String(signedWish?.end_date ?? '');
-  const money = weekendCount(startDate, 7);
+  const money = weekendCount(startDate, 10);
   check('签署 → 200 + active + first_sign true', signed.status === 200 && signedWish?.status === 'active' && data(signed).first_sign === true, signed.envelope);
   check('start_date = 产品日（04:00 日界）', startDate === '2026-05-20', startDate);
-  check('end_date = start + days - 1', endDate === isoAddDays(startDate, 6), endDate);
+  check('end_date = start + days - 1', endDate === isoAddDays(startDate, 9), endDate);
   check('settle_open_at = 截止日次日 04:00+08（即当日 20:00Z）', signedWish?.settle_open_at === `${endDate}T20:00:00.000Z`, signedWish?.settle_open_at);
-  check('任务总数 = 每天 2 条必做 + 周末各 1 条钱任务', tasks.length === 14 + money, { total: tasks.length, money });
+  check('任务总数 = 每天 2 条必做 + 周末各 1 条钱任务', tasks.length === 20 + money, { total: tasks.length, money });
 
   const byDay = new Map<number, Data[]>();
   for (const task of tasks) {
     const day = Number(task.day_index);
     byDay.set(day, [...(byDay.get(day) ?? []), task]);
   }
-  check('day_index 从 0 开始且覆盖 7 天', [...byDay.keys()].sort((a, b) => a - b).join(',') === '0,1,2,3,4,5,6', [...byDay.keys()]);
+  check('day_index 从 0 开始且覆盖 10 天', [...byDay.keys()].sort((a, b) => a - b).join(',') === '0,1,2,3,4,5,6,7,8,9', [...byDay.keys()]);
   const shapeOk = [...byDay.entries()].every(([day, list]) => {
     const types = list.map((task) => String(task.type)).sort().join(',');
     const expected = isWeekend(isoAddDays(startDate, day)) ? 'money,self,ta' : 'self,ta';
@@ -413,24 +413,24 @@ let secondWishId = '';
   check('task_date 是 TEXT ISO 日期', tasks.every((task) => /^\d{4}-\d{2}-\d{2}$/.test(String(task.task_date))), tasks[0]?.task_date);
   const titles = tasks.map((task) => String(task.title));
   check('同一愿签内任务标题不重复', new Set(titles).size === titles.length, titles.length);
-  check('7 天契约不需要轮转副本', tasks.every((task) => Number(task.rotation) === 0), tasks.filter((task) => Number(task.rotation) > 0).length);
+  check('任务都带标签（1~3 个 2~3 字）', tasks.every((task) => Array.isArray(task.tags) && (task.tags as string[]).length > 0), tasks.filter((task) => !Array.isArray(task.tags)).length);
   const summary = data(signed).task_summary as Data;
-  check('task_summary 与任务表一致', summary.total === tasks.length && summary.must === 14 && summary.optional === money && summary.ta === 7 && summary.self === 7 && summary.money === money && summary.days === 7, summary);
+  check('task_summary 与任务表一致', summary.total === tasks.length && summary.must === 20 && summary.optional === money && summary.ta === 10 && summary.self === 10 && summary.money === money && summary.days === 10, summary);
   check('返回恢复码提示但不重新下发恢复码', typeof data(signed).recovery_code_notice === 'string' && data(signed).recovery_code === undefined, Object.keys(data(signed)));
   check('签署响应不含五问明文', !signed.raw.includes('改一次答案'), signed.raw.slice(0, 160));
 
   const locked = await putAnswers(wishId, { q1: '签完再改' });
   check('签署后改五问 → 400 answers_locked', locked.status === 400 && locked.envelope.errorCode === 'answers_locked', locked.envelope);
 
-  const repeat = await postContract(wishId, { days: 7 });
+  const repeat = await postContract(wishId, { days: 10 });
   check('重复签署 → 200 + first_sign false', repeat.status === 200 && data(repeat).first_sign === false, repeat.envelope);
   check('重复签署不新增任务、不改开始日', (data(repeat).tasks as Data[]).length === tasks.length && (data(repeat).wish as Data).start_date === startDate, data(repeat).task_summary);
-  const bigger = await postContract(wishId, { days: 30 });
-  check('重复签署传更大 days 仍按首签 7 天', (data(bigger).wish as Data).days === 7 && (data(bigger).tasks as Data[]).length === tasks.length, data(bigger).task_summary);
+  const bigger = await postContract(wishId, { days: 10 });
+  check('重复签署仍按首签 10 天', (data(bigger).wish as Data).days === 10 && (data(bigger).tasks as Data[]).length === tasks.length, data(bigger).task_summary);
 
   const contractKey = crypto.randomUUID();
-  const once = await postContract(wishId, { days: 7 }, authorToken, { 'idempotency-key': contractKey });
-  const twice = await postContract(wishId, { days: 7 }, authorToken, { 'idempotency-key': contractKey });
+  const once = await postContract(wishId, { days: 10 }, authorToken, { 'idempotency-key': contractKey });
+  const twice = await postContract(wishId, { days: 10 }, authorToken, { 'idempotency-key': contractKey });
   check('签署同键重放 → 响应逐字节一致', once.status === 200 && twice.raw === once.raw, { once: once.status, twice: twice.status });
 
   // 崩溃补齐：任务 id 由 (愿签, 天, 序) 派生，重签只补缺的那几条
@@ -444,12 +444,12 @@ let secondWishId = '';
   // 长契约：候选池耗尽 → 轮转副本
   const longId = String((data(await postWish(newWish())).wish as Data).id);
   await putAnswers(longId, { q1: 'a', q2: 'b', q3: 'c', q4: 'd', q5: 'e' });
-  const longSigned = await postContract(longId, { days: 30 });
+  const longSigned = await postContract(longId, { days: 10 });
   const longTasks = data(longSigned).tasks as Data[];
   const longStart = String((data(longSigned).wish as Data).start_date);
-  const longMoney = weekendCount(longStart, 30);
-  check('30 天契约一次性生成全部任务', longTasks.length === 60 + longMoney, { total: longTasks.length, longMoney });
-  check('30 天契约标题仍唯一', new Set(longTasks.map((task) => String(task.title))).size === longTasks.length, longTasks.length);
+  const longMoney = weekendCount(longStart, 10);
+  check('十天契约一次性生成全部任务', longTasks.length === 20 + longMoney, { total: longTasks.length, longMoney });
+  check('十天契约标题仍唯一', new Set(longTasks.map((task) => String(task.title))).size === longTasks.length, longTasks.length);
   check('长契约出现轮转副本', longTasks.some((task) => Number(task.rotation) > 0), longTasks.filter((task) => Number(task.rotation) > 0).length);
   const rotated = deps.db.rowsOf('tasks').filter((row) => row.wish_id === longId && Number(row.rotation) > 0);
   check('轮转副本 template_id 置 NULL', rotated.length > 0 && rotated.every((row) => row.template_id === null), rotated.length);
@@ -524,7 +524,7 @@ let secondWishId = '';
   check('真实账号读演示愿签 → 404', (await call({ path: `/api/wishes/${demoWish?.id}`, token: authorToken })).status === 404);
   await putAnswers(String(demoWish?.id), { q1: 'a', q2: 'b', q3: 'c', q4: 'd', q5: 'e' }, demoToken);
   const demoSigned = await postContract(String(demoWish?.id), {}, demoToken);
-  check('days 缺省 = 7', (data(demoSigned).wish as Data).days === 7, data(demoSigned).task_summary);
+  check('days 缺省 = 10', (data(demoSigned).wish as Data).days === 10, data(demoSigned).task_summary);
   check('演示签署提示说明没有恢复码', String(data(demoSigned).recovery_code_notice).includes('演示账号没有恢复码'), data(demoSigned).recovery_code_notice);
 }
 
@@ -1035,7 +1035,7 @@ let may20SelfId = '';
     const weekend = await getToday();
     const weekendTasks = (data(weekend).tasks as Data[]) ?? [];
     may23MoneyId = String(weekendTasks.find((task) => task.type === 'money')?.id ?? '');
-    const moneyDone = await ledgerCall({ path: `/api/tasks/${may23MoneyId}/checkin`, token: lgToken, body: { proof_id: checkinProof, note: '接了个小活' } });
+    const moneyDone = await ledgerCall({ path: `/api/tasks/${may23MoneyId}/checkin`, token: lgToken, body: { proof_id: checkinProof, note: '接了个小活', amount_cents: 6_000 } });
     check('周六钱任务打卡 → done', moneyDone.status === 200 && (data(moneyDone).task as Data).status === 'done', moneyDone.envelope);
     const may24Row = ledgerDeps.db.rowsOf('tasks').find((row) => row.wish_id === wishId && row.side === 'money' && row.task_date === '2026-05-24');
     may24MoneyId = String(may24Row?.id ?? '');
@@ -1076,7 +1076,7 @@ let may20SelfId = '';
     const sunday = await getToday();
     const sundayMoney = (((data(sunday).tasks as Data[]) ?? []).find((task) => task.type === 'money')) as Data;
     check('周日钱任务可取到', String(sundayMoney.id) === may24MoneyId, { expected: may24MoneyId, got: sundayMoney.id });
-    const sundayDone = await ledgerCall({ path: `/api/tasks/${may24MoneyId}/checkin`, token: lgToken, body: { proof_id: checkinProof } });
+    const sundayDone = await ledgerCall({ path: `/api/tasks/${may24MoneyId}/checkin`, token: lgToken, body: { proof_id: checkinProof, amount_cents: 1_500 } });
     check('周日钱任务打卡 → done', sundayDone.status === 200 && (data(sundayDone).task as Data).status === 'done', sundayDone.envelope);
     const withProof = await addEntry({ ...base, amount_cents: 1_000, proof_id: ledgerProof, task_id: may24MoneyId });
     check(
@@ -1143,10 +1143,13 @@ let may20SelfId = '';
     check('未来周记账 → 400 week_not_started', futureEntry.status === 400 && futureEntry.envelope.errorCode === 'week_not_started', futureEntry.envelope);
 
     const ledgerRows = ledgerDeps.db.rowsOf('ledger_entries').filter((row) => row.wish_id === wishId);
+    const manualRows = ledgerRows.filter((row) => row.source === 'manual');
     check(
       '流水只追加且用户/愿签一致',
-      ledgerRows.length === 7 && ledgerRows.every((row) => row.user_id === lgUserId && row.revoked_at === null && row.source === 'manual'),
-      ledgerRows.map((row) => [row.entry_kind, row.amount_cents]),
+      manualRows.length === 7 && ledgerRows.length === 9
+        && ledgerRows.every((row) => row.user_id === lgUserId && row.revoked_at === null)
+        && manualRows.every((row) => row.source === 'manual'),
+      ledgerRows.map((row) => [row.entry_kind, row.amount_cents, row.source]),
     );
     const weekRows = ledgerDeps.db.rowsOf('ledger_weeks').filter((row) => row.wish_id === wishId);
     check(
@@ -1237,7 +1240,7 @@ let may20SelfId = '';
   const readSettlementResult = (court: Court, id: string, token = court.token) =>
     court.call({ path: `/api/wishes/${id}/settlement`, token });
   const extendWishCall = (court: Court, id: string, token = court.token) =>
-    court.call({ path: `/api/wishes/${id}/extend`, token, body: {} });
+    court.call({ path: `/api/wishes/${id}/extend`, token, body: { days: 5 } });
 
   // 13a 时间闸门 / 双重兑现 / 168 元护膝仪 / 重复结算 / 权限
   {
@@ -1405,18 +1408,18 @@ let may20SelfId = '';
     const extended = await extendWishCall(court, wishId);
     const extendedWish = (data(extended).wish ?? {}) as Data;
     check(
-      '续期成功 → active / 截止日 +7 天 / 补生成 16 条任务',
+      '续期成功 → active / 截止日 +5 天 / 补生成 12 条任务',
       extended.status === 200 && extendedWish.status === 'active'
-        && data(extended).new_end_date === '2026-06-02' && data(extended).added_tasks === 16,
+        && data(extended).new_end_date === '2026-05-31' && data(extended).added_tasks === 12,
       extended.envelope,
     );
     check(
-      '续期补发对应周补卡券（05-25 与 06-01）',
-      data(extended).makeup_tickets === 2
-        && court.deps.db.rowsOf('makeup_tickets').some((row) => row.wish_id === wishId && row.week_start === '2026-06-01' && row.status === 'available'),
+      '续期补发对应周补卡券（05-25）',
+      data(extended).makeup_tickets === 1
+        && court.deps.db.rowsOf('makeup_tickets').some((row) => row.wish_id === wishId && row.week_start === '2026-05-25' && row.status === 'available'),
       court.deps.db.rowsOf('makeup_tickets').filter((row) => row.wish_id === wishId).map((row) => [row.week_start, row.status]),
     );
-    check('续期后的新结算开放时刻', data(extended).settle_open_at === '2026-06-02T20:00:00.000Z', data(extended).settle_open_at);
+    check('续期后的新结算开放时刻', data(extended).settle_open_at === '2026-05-31T20:00:00.000Z', data(extended).settle_open_at);
 
     const afterExtendRead = await readSettlementResult(court, wishId);
     check(
@@ -1495,7 +1498,7 @@ let may20SelfId = '';
     check(
       '未实现续期 → 回到 active 且保留历史快照',
       extended.status === 200 && (data(extended).wish as Data)?.status === 'active'
-        && data(extended).new_end_date === '2026-06-02' && rowsAfterExtend.length === 1,
+        && data(extended).new_end_date === '2026-05-31' && rowsAfterExtend.length === 1,
       extended.envelope,
     );
     const secondExtend = await extendWishCall(court, wishId);

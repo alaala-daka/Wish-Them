@@ -1,29 +1,26 @@
 import { useState } from 'react';
 import { Plus, BookOpen } from 'lucide-react';
-import { productDay, weekStart, type LedgerEntry } from '../domain';
+import type { LedgerEntry } from '../domain';
 import { Heading, Paper } from '../components';
 import NoWish from './NoWish';
 import type { Props } from './types';
 
 const kindLabel = (kind: LedgerEntry['kind']) =>
-  kind === 'budget' ? '周预算' : kind === 'expense' ? '非必要支出' : '兼职收入';
+  kind === 'budget'
+    ? '周预算'
+    : kind === 'expense'
+      ? '非必要支出'
+      : kind === 'saved'
+        ? '任务省下'
+        : '任务收入';
 
-export function Ledger({ data, notify, isDemo, actions }: Props) {
-  const [kind, setKind] = useState<LedgerEntry['kind']>('expense'),
+export function Ledger({ data, notify, actions }: Props) {
+  const [kind, setKind] = useState<'expense' | 'budget'>('expense'),
     [amount, setAmount] = useState(''),
     [note, setNote] = useState(''),
-    [taskId, setTaskId] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
-  const summary = data.ledgerTotals ?? { saved: 0, earned: 0, total: 0 },
-    week = weekStart(productDay());
-  const moneyTasks =
-    data.wish?.tasks.filter(
-      (task) =>
-        task.kind === 'money' &&
-        (task.status === 'done' || task.status === 'made_up') &&
-        weekStart(task.date) === week,
-    ) || [];
+  const summary = data.ledgerTotals ?? { saved: 0, earned: 0, total: 0 };
   const settled = data.wish?.status === 'settled';
 
   async function submit(e: React.FormEvent) {
@@ -34,23 +31,15 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
       return;
     }
     const cents = Math.round(yuan * 100);
-    if (kind === 'income' && (cents < 100 || !taskId)) {
-      setError('兼职收入至少 1 元，并需关联本愿签已完成的钱任务。');
-      return;
-    }
-    if (kind !== 'income' && cents > 200_000) {
+    if (cents > 200_000) {
       setError('单笔预算或支出不能超过 2000 元。');
-      return;
-    }
-    if (kind === 'income' && cents > 100_000) {
-      setError('单笔收入不能超过 1000 元。');
       return;
     }
     setBusy(true);
     setError('');
     try {
       if (kind === 'budget') await actions.setWeekBudget(cents);
-      else await actions.addLedgerEntry(kind, cents, note, kind === 'income' ? taskId : undefined);
+      else await actions.addLedgerEntry(kind, cents, note);
       setAmount('');
       setNote('');
       notify('这一笔，已记到账本。');
@@ -76,11 +65,11 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
       />
       <div className="ledger-summary">
         <Paper>
-          <span>累计省下</span>
+          <span>任务省下</span>
           <strong>¥{summary.saved}</strong>
         </Paper>
         <Paper>
-          <span>累计挣到</span>
+          <span>任务挣到</span>
           <strong>¥{summary.earned}</strong>
         </Paper>
         <Paper className="total">
@@ -95,7 +84,7 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
             <span className="tag">按自然周记录</span>
           </div>
           <p className="muted">
-            每周省下 = 预算 − 非必要支出，最低为0元。支出超过预算会提示，但不会拦截提交。
+            任务省下/收入来自今日页打卡时填写的金额；周预算结余 = 预算 − 非必要支出，只作参考，不重复计入愿望基金。
           </p>
           {data.ledger.length ? (
             [...new Set(data.ledger.map((entry) => entry.week))]
@@ -130,19 +119,16 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
           <h2>记下一笔</h2>
           {settled ? (
             <p className="muted">这份约定已经结算，账本已归档，不能再追加记录。</p>
-          ) : isDemo ? (
-            <p className="muted">演示模式只读；退出演示后可以记账。</p>
           ) : (
             <form onSubmit={submit}>
               <label>
                 记账类型
                 <select
                   value={kind}
-                  onChange={(e) => setKind(e.target.value as LedgerEntry['kind'])}
+                  onChange={(e) => setKind(e.target.value as 'expense' | 'budget')}
                 >
                   <option value="expense">非必要支出</option>
                   <option value="budget">设置本周预算</option>
-                  <option value="income">兼职收入</option>
                 </select>
               </label>
               <label>
@@ -151,7 +137,7 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
                   required
                   type="number"
                   min="0"
-                  max={kind === 'income' ? 1000 : 2000}
+                  max={2000}
                   step="1"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -166,20 +152,7 @@ export function Ledger({ data, notify, isDemo, actions }: Props) {
                   placeholder="例如：本周少喝两杯奶茶"
                 />
               </label>
-              {kind === 'income' && (
-                <label>
-                  关联已完成的钱任务
-                  <select required value={taskId} onChange={(e) => setTaskId(e.target.value)}>
-                    <option value="">请选择</option>
-                    {moneyTasks.map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.date} · {task.title}
-                      </option>
-                    ))}
-                  </select>
-                  <small>先在今日页完成周末钱任务并上传佐证。</small>
-                </label>
-              )}
+              <p className="muted">钱任务的省下/收入会在今日页打卡时自动记入，不需要在这里重复填写。</p>
               {error && (
                 <p className="form-error" role="alert">
                   {error}

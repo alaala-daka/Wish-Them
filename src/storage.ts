@@ -1,4 +1,29 @@
 import { emptyData, type AppData } from './domain';
+
+/** 旧版本草稿没有 choices/meta：读回时补齐，避免问卷分支读取 undefined */
+function normalize(data: AppData): AppData {
+  const base = emptyData();
+  return {
+    ...base,
+    ...data,
+    draft: {
+      ...base.draft,
+      ...data.draft,
+      answers: data.draft?.answers?.length === 5 ? data.draft.answers : base.draft.answers,
+      choices: data.draft?.choices?.length === 5 ? data.draft.choices : base.draft.choices,
+      meta: data.draft?.meta ?? {},
+    },
+    wish: data.wish
+      ? {
+        ...data.wish,
+        tasks: (data.wish.tasks ?? []).map((task) => ({
+          ...task,
+          tags: task.tags?.length ? task.tags : ['心意'],
+        })),
+      }
+      : null,
+  };
+}
 let dbPromise: Promise<IDBDatabase> | undefined;
 function database() {
   return (dbPromise ??= new Promise((resolve, reject) => {
@@ -13,7 +38,7 @@ export async function loadData(): Promise<AppData> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('app');
     const r = tx.objectStore('app').get('personal');
-    r.onsuccess = () => resolve(r.result?.version === 1 ? r.result : emptyData());
+    r.onsuccess = () => resolve(r.result?.version === 1 ? normalize(r.result as AppData) : emptyData());
     r.onerror = () => reject(r.error);
   });
 }

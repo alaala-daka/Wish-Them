@@ -17,10 +17,10 @@
  * 错误：400 invalid_parameter（含 details.fields）/ 400 answers_locked / 401 invalid_token
  *       403 wish_forbidden / 404 wish_not_found / 409 idempotency_key_reuse / 422 no_op
  */
-import { internal, unprocessable } from '../../../lib/errors.ts';
+import { badRequest, internal, unprocessable } from '../../../lib/errors.ts';
 import { ok } from '../../../lib/respond.ts';
 import { parseUuidParam, validate, type FieldSpec } from '../../../lib/validate.ts';
-import { ANSWER_COLUMNS, requireAuthor, saveAnswers } from '../../../domain/wish.ts';
+import { ANSWER_COLUMNS, requireAuthor, saveAnswers, type AnswerMeta } from '../../../domain/wish.ts';
 import type { Ctx, RouteDef } from '../../../lib/types.ts';
 
 export const route: RouteDef = {
@@ -37,6 +37,39 @@ const BODY: Record<string, FieldSpec> = Object.fromEntries(
   Object.keys(ANSWER_COLUMNS).map((field) => [field, { type: 'text', min: 1, max: 200 } as FieldSpec]),
 );
 
+/** 动态问卷的粗粒度档位：只接受白名单枚举，避免客户端塞入任意列值 */
+const META_VALUES: Record<keyof AnswerMeta, readonly string[]> = {
+  giftCategory: ['body', 'sleep', 'lonely', 'study', 'emotion', 'life'],
+  aloneLevel: ['high', 'medium', 'low'],
+  lastHome: ['recent', 'week', 'month', 'long'],
+  travelBand: ['same_city', 'near', 'far', 'unknown'],
+  costBand: ['under_100', '100_299', '300_599', '600_999', '1000_plus'],
+  disposableBand: ['under_100', '100_299', '300_599', '600_999', '1000_plus'],
+};
+
+function parseMeta(raw: unknown): AnswerMeta {
+  if (raw === undefined || raw === null) return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw badRequest('invalid_parameter', 'meta 必须是对象。', { fields: { meta: 'must be an object' } });
+  }
+  const source = raw as Record<string, unknown>;
+  const meta: AnswerMeta = {};
+  const errors: Record<string, string> = {};
+  for (const [key, allowed] of Object.entries(META_VALUES) as Array<[keyof AnswerMeta, readonly string[]]>) {
+    const value = source[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'string' || !allowed.includes(value)) {
+      errors[`meta.${key}`] = `must be one of ${allowed.join('|')}`;
+      continue;
+    }
+    meta[key] = value;
+  }
+  if (Object.keys(errors).length > 0) {
+    throw badRequest('invalid_parameter', '问卷档位校验未通过。', { fields: errors });
+  }
+  return meta;
+}
+
 export default async function wishAnswers(ctx: Ctx): Promise<Response> {
   const principal = ctx.principal;
   if (!principal) throw internal('鉴权中间件未注入身份');
@@ -52,6 +85,7 @@ export default async function wishAnswers(ctx: Ctx): Promise<Response> {
     wish,
     body.value as Record<string, string>,
     ctx.now,
+    parseMeta((ctx.body as Record<string, unknown> | null)?.meta),
   );
   return ok({ ...result, encrypted_stored: true }, ctx.requestId);
 }

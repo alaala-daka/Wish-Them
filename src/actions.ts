@@ -7,8 +7,8 @@ import type { Draft } from './domain';
  */
 export type Actions = {
   createWish(draft: Draft, signature: string): Promise<void>;
-  checkin(taskId: string, imageDataUrl: string, note: string): Promise<void>;
-  makeup(taskId: string, imageDataUrl: string, note: string): Promise<void>;
+  checkin(taskId: string, imageDataUrl: string, note: string, amountCents?: number): Promise<void>;
+  makeup(taskId: string, imageDataUrl: string, note: string, amountCents?: number): Promise<void>;
   setWeekBudget(cents: number): Promise<void>;
   addLedgerEntry(
     kind: 'expense' | 'income',
@@ -17,7 +17,7 @@ export type Actions = {
     taskId?: string,
   ): Promise<void>;
   settle(): Promise<void>;
-  extend(): Promise<void>;
+  extend(days: number): Promise<void>;
   polish(text: string, relation: string): Promise<AiResult>;
   listPool(category?: string): Promise<PoolPostDto[]>;
   getPost(id: string): Promise<{ post: PoolPostDto; replies: ReplyDto[] }>;

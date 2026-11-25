@@ -17,7 +17,8 @@
  */
 import { internal } from '../../../lib/errors.ts';
 import { ok } from '../../../lib/respond.ts';
-import { parseUuidParam } from '../../../lib/validate.ts';
+import { parseUuidParam, validate } from '../../../lib/validate.ts';
+import { MAX_EXTEND_DAYS, MIN_EXTEND_DAYS } from '../../../domain/rules.ts';
 import { requireAuthor, toWishDto } from '../../../domain/wish.ts';
 import { extendWish } from '../../../domain/settlement.ts';
 import type { Ctx, RouteDef } from '../../../lib/types.ts';
@@ -35,11 +36,16 @@ export default async function wishExtend(ctx: Ctx): Promise<Response> {
   const principal = ctx.principal;
   if (!principal) throw internal('鉴权中间件未注入身份');
   const wishId = parseUuidParam(ctx.params.id);
+  const body = validate<{ days?: number }>(ctx.body ?? {}, {
+    days: { type: 'int', min: MIN_EXTEND_DAYS, max: MAX_EXTEND_DAYS },
+  });
+  const days = body.value.days === undefined ? MIN_EXTEND_DAYS : Number(body.value.days);
   const wish = await requireAuthor(ctx.db, wishId, principal.userId);
-  const result = await extendWish(ctx.db, wish, ctx.now);
+  const result = await extendWish(ctx.db, wish, days, ctx.now);
   return ok({
     wish: toWishDto(result.wish),
     new_end_date: result.new_end_date,
+    days: result.days,
     added_tasks: result.added_tasks,
     makeup_tickets: result.makeup_tickets,
     settle_open_at: result.settle_open_at,

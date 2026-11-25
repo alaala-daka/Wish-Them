@@ -3,6 +3,7 @@ import {
   Camera,
   Check,
   CheckCheck,
+  Clock,
   Heart,
   ImagePlus,
   Leaf,
@@ -24,14 +25,15 @@ const isDone = (data: Props['data'], task: Task) =>
 const canMakeup = (data: Props['data'], task: Task) =>
   data.makeupAvailable && weekStart(task.date) === weekStart(productDay());
 
-export function Today({ data, notify, isDemo, actions }: Props) {
+export function Today({ data, notify, actions }: Props) {
   const wish = data.wish,
     day = productDay();
   const tasks = wish?.tasks.filter((t) => t.date === day) || [];
-  const shownTasks = isDemo && wish ? wish.tasks.filter((t) => t.date === wish.start) : tasks;
+  const shownTasks = tasks;
   const [selected, setSelected] = useState<Task | null>(null),
     [image, setImage] = useState(''),
     [note, setNote] = useState(''),
+    [amount, setAmount] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const input = useRef<HTMLInputElement>(null);
@@ -40,6 +42,7 @@ export function Today({ data, notify, isDemo, actions }: Props) {
     setSelected(null);
     setImage('');
     setNote('');
+    setAmount('');
   }, [wish?.id]);
   async function upload(file?: File) {
     if (!file) return;
@@ -55,19 +58,29 @@ export function Today({ data, notify, isDemo, actions }: Props) {
   }
   async function submit() {
     if (!selected || !image || busy) return;
+    let amountCents: number | undefined;
+    if (selected.kind === 'money') {
+      const yuan = Number(amount);
+      if (!amount || !Number.isInteger(yuan) || yuan <= 0 || yuan > 2000) {
+        setError('请填写这次实际省下或挣到的金额（1~2000 元的整数）。');
+        return;
+      }
+      amountCents = yuan * 100;
+    }
     setBusy(true);
     setError('');
     try {
       if (selected.status === 'missed') {
-        await actions.makeup(selected.id, image, note.trim());
+        await actions.makeup(selected.id, image, note.trim(), amountCents);
         notify('已用本周补卡券补上这件小事。');
       } else {
-        await actions.checkin(selected.id, image, note.trim());
+        await actions.checkin(selected.id, image, note.trim(), amountCents);
         notify('今天的小事已记录，心意又近了一点。');
       }
       setSelected(null);
       setImage('');
       setNote('');
+      setAmount('');
     } catch (e) {
       setError((e as Error).message || '记录未保存，请重试。');
     } finally {
@@ -148,28 +161,42 @@ export function Today({ data, notify, isDemo, actions }: Props) {
                       </span>
                     )}
                   </div>
+                  {task.tags.length > 0 && (
+                    <div className="task-tags" aria-label="任务标签">
+                      {task.tags.map((tag) => (
+                        <span key={tag} className={`tag ${task.kind === 'money' ? 'money' : ''}`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <h3>{task.title}</h3>
-                  <p>用一张照片或截图，收藏这件小事。</p>
+                  <p>
+                    {task.kind === 'money'
+                      ? '拍下凭证，并填上这次实际省下或挣到的钱。'
+                      : '用一张照片或截图，收藏这件小事。'}
+                    {done && task.amountCents
+                      ? ` 已${task.moneyKind === 'save' ? '省' : '挣'} ¥${Math.floor(task.amountCents / 100)}。`
+                      : ''}
+                  </p>
                   <button
                     className={done ? 'secondary' : 'primary'}
-                    disabled={isDemo && !done}
                     onClick={() => {
                       setSelected(task);
                       const c = data.checkins.find((r) => r.taskId === task.id);
                       setImage(c?.image || '');
                       setNote(c?.note || '');
+                      setAmount(task.amountCents ? String(Math.floor(task.amountCents / 100)) : '');
                       setError('');
                     }}
                   >
-                    {isDemo && !done
-                      ? '演示模式只读'
-                      : done
-                        ? '查看记录'
-                        : missed
-                          ? canMakeup(data, task)
-                            ? '去补卡'
-                            : '已错过'
-                          : '去记录'}
+                    {done
+                      ? '查看记录'
+                      : missed
+                        ? canMakeup(data, task)
+                          ? '去补卡'
+                          : '已错过'
+                        : '去记录'}
                   </button>
                 </Paper>
               );
@@ -189,6 +216,10 @@ export function Today({ data, notify, isDemo, actions }: Props) {
           <p className="quiet-note">
             <LockKeyhole size={14} />
             记录只属于你，不会出现在愿签池。
+          </p>
+          <p className="quiet-note">
+            <Clock size={14} />
+            每天 04:00（中国时间）更新当天的小事；周末会自动出现金额任务。
           </p>
         </div>
         <Paper className="record-panel">
@@ -264,6 +295,28 @@ export function Today({ data, notify, isDemo, actions }: Props) {
                 <span>照片仅自己可见</span>
                 <span>{(current?.note ?? note).length}/30</span>
               </div>
+              {selected.kind === 'money' && (
+                current ? (
+                  <p className="tag money">
+                    这次{current.amountKind === 'earned' ? '挣到' : '省下'} ¥
+                    {Math.floor((current.amountCents ?? 0) / 100)}
+                  </p>
+                ) : (
+                  <label>
+                    这次实际{selected.moneyKind === 'earn' ? '挣到' : '省下'}（元）
+                    <input
+                      type="number"
+                      min="1"
+                      max="2000"
+                      step="1"
+                      inputMode="numeric"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder={selected.moneyKind === 'earn' ? '例如：80' : '例如：30'}
+                    />
+                  </label>
+                )
+              )}
               {error && (
                 <p role="alert" className="form-error">
                   {error}
@@ -280,7 +333,11 @@ export function Today({ data, notify, isDemo, actions }: Props) {
                 </p>
               ) : (
                 <>
-                  <button className="primary full" disabled={!image || busy} onClick={submit}>
+                  <button
+                    className="primary full"
+                    disabled={!image || busy || (selected.kind === 'money' && !amount)}
+                    onClick={submit}
+                  >
                     {busy
                       ? '正在处理…'
                       : selected.status === 'missed'
@@ -288,6 +345,9 @@ export function Today({ data, notify, isDemo, actions }: Props) {
                         : '收好今天的记录'}
                   </button>
                   {!image && <p className="muted">添加照片后即可完成记录。</p>}
+                  {image && selected.kind === 'money' && !amount && (
+                    <p className="muted">再填上这次的金额，就可以收好了。</p>
+                  )}
                   {selected.status === 'missed' && (
                     <p className="muted">补卡会使用本周唯一的一张券。</p>
                   )}

@@ -135,6 +135,14 @@ export interface AppConfig {
   aiAgentEndpoint: string;
   /** Agents 端点鉴权令牌；未配置时不带 Authorization 头 */
   aiAgentToken: string;
+  /** DeepSeek 彩蛋生成：密钥只放服务端；为空时彩蛋走确定性模板 */
+  deepseekApiKey: string;
+  deepseekBaseUrl: string;
+  deepseekModel: string;
+  /** 是否启用 DeepSeek 彩蛋（默认开启，但没有密钥时自然回退模板） */
+  aiEasterEggEnabled: boolean;
+  /** 彩蛋生成超时（毫秒）；超时立即回退模板，不阻塞结算 */
+  aiEasterEggTimeoutMs: number;
   /** 单个账号每个产品日可创建的愿签数（草稿也计数），环境变量 WISH_CREATE_PER_DAY */
   wishCreatePerDay: number;
   /** 单个账号每分钟可提交的打卡次数，环境变量 CHECKIN_PER_MINUTE */

@@ -4,7 +4,7 @@ import { emptyDraft, settleDue } from '../domain';
 import { go, Heading, Mascot, Paper, WishCard } from '../components';
 import type { Props } from './types';
 
-export function Mine({ data, update, notify, actions, isDemo }: Props) {
+export function Mine({ data, update, notify, actions }: Props) {
   const [recovery, setRecovery] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -95,7 +95,7 @@ export function Mine({ data, update, notify, actions, isDemo }: Props) {
               </button>
             </div>
           )}
-          {!isDemo && (
+          {(
             <form
               className="recover-form"
               onSubmit={async (e) => {
@@ -138,7 +138,7 @@ export function Mine({ data, update, notify, actions, isDemo }: Props) {
             导出文字记录
           </button>
           <p className="muted">导出不含五问答案和照片，不可用于跨设备恢复。</p>
-          {!isDemo && (
+          {(
             <>
               <button
                 className="text-button"

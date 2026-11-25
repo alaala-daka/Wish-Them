@@ -67,7 +67,7 @@ const samplePosts: PoolPostView[] = [
 
 const filters = ['全部', '身体', '睡眠', '孤单', '学业', '情绪', '生活'];
 
-export function Pool({ data, update, notify, actions, isDemo }: Props) {
+export function Pool({ data, update, notify, actions }: Props) {
   const [filter, setFilter] = useState('全部'),
     [posts, setPosts] = useState<PoolPostView[]>(samplePosts),
     [selected, setSelected] = useState<PoolPostView | null>(null),
@@ -81,10 +81,6 @@ export function Pool({ data, update, notify, actions, isDemo }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (isDemo) {
-        setPosts(samplePosts);
-        return;
-      }
       setLoading(true);
       setError('');
       try {
@@ -120,7 +116,7 @@ export function Pool({ data, update, notify, actions, isDemo }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [filter, isDemo]);
+  }, [filter]);
 
   async function open(post: PoolPostView) {
     setSelected(post);

@@ -533,3 +533,15 @@ select … where is_active = true and wish_type in (<本愿签类型>, 'any') li
 | 对象存储未验证 | `files` 状态机依赖存储侧三件事：①桶为私有、②`createSignedUploadUrl(...,{upsert:false})` 签发的 PUT 强制 content-type、③`download()` 在 15 秒超时内返回对象字节。本地是内存 FakeStorage，云端行为（含 600s GET URL 到期）尚未实测；`complete` 下载失败一律 503 `storage_unavailable`，不会把未验证文件标 ready |
 | pending 文件清扫 | 无 cron：presign 后用户放弃 PUT 会留下 `pending` 行，只在 `complete` 时按 `expires_at` 惰性拒绝，行本身与可能有残留对象都不清理。上线后需按 `files_status_expires_at_idx` 做离线清扫或加平台调度 |
 | 人工核对项 | ①`PATCH /api/me` 的 `COLUMNS` 映射值写在字符串里，`check-schema-usage.ts` 不解析；②`files.purpose` / `wishes.status` / `tasks.side` 等取值只存在于注释与文档，改列时必须同步改文档与 seed 校验器；③真实 PostgREST 的 `insertIfAbsent`（`Prefer: resolution=ignore-duplicates`）与 `affected()` 行为未在云端验证，本地是内存实现——**第 3 轮的"崩溃后补齐任务"与第 6 轮的"结算快照幂等写入"完全依赖逐行忽略冲突这一语义**，上线后必须专门验一次；④`check-schema-usage.ts` 按变量名回查载荷，同一文件里多个写载荷不能同名（`wish.ts` 因此用 `values` / `answerValues` 区分），新增写操作时注意；⑤`tasks` 的 `id` 是派生 uuid，云端 `gen_random_uuid()` 默认值不参与，批量写必须显式给 id；⑥`ledger_weeks.updated_at` 作为 CAS 令牌依赖"每次写入取更晚的时刻"，云端同毫秒并发极罕见，但若 `now()` 精度不足需改为显式递增计数器 |
+
+## 第 10 轮增量（迁移 0008）
+
+- `app.task_templates` / `app.tasks` 新增可空列：
+  - `tags jsonb`：任务标签数组（1~3 个，2~3 字）；
+  - `money_kind text`：`save` / `earn`（非钱任务为空）。
+- `app.checkins` 新增可空列：
+  - `amount_cents integer`：金额任务打卡时用户自填的金额（分）；
+  - `amount_kind text`：`saved` / `earned`。
+- `ledger_entries.entry_kind` 新增内部值 `saved`（由金额任务打卡写入，手工记账接口仍只接受 `expense` / `earning`）。
+- 彩蛋结果写入 `settlements.self_summary.easter_egg`，不新增表/列。
+- 新增列全部可空、无默认值；旧任务/旧打卡由 DTO 与账本读时兜底。

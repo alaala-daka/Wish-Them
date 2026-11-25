@@ -49,11 +49,17 @@ with sync_playwright() as p:
     expect(page.locator('.suggestions .tag').first).to_have_text('AI辅助')
     page.locator('.suggestions button', has_text='选用').first.click()
     page.get_by_role('button', name='下一步', exact=True).click()
-    for answer in ['最近她总说腰疼', '会有一点', '上周日', '500元', '想陪她散步']:
-        page.get_by_label('写一点你愿意说的（1–200 字）').fill(answer)
-        next_question = page.get_by_role('button', name='下一题', exact=True)
-        if next_question.count():
-            next_question.click()
+    # Q1 自由填写；Q2 选身体不舒服 → Q3 身体分支；Q4 预算；Q5 感受
+    page.get_by_label('写一点你愿意说的').fill('最近她总说腰疼，不肯去检查。')
+    page.get_by_role('button', name='下一题', exact=True).click()
+    page.get_by_role('button', name='总说忍一忍就过去了', exact=True).click()
+    page.get_by_role('button', name='下一题', exact=True).click()
+    page.get_by_role('button', name='腿脚 / 腰背', exact=True).click()
+    page.get_by_role('button', name='下一题', exact=True).click()
+    page.get_by_role('button', name='300–599', exact=True).click()
+    page.get_by_role('button', name='下一题', exact=True).click()
+    page.get_by_role('button', name='陪 TA 去检查', exact=True).click()
+    page.get_by_role('button', name='下一步', exact=True).click()
     page.get_by_label('签下你的称呼').fill('小叶')
     page.get_by_role('checkbox').check()
     page.get_by_role('button', name='签下约定', exact=True).click()
@@ -100,25 +106,37 @@ with sync_playwright() as p:
     page.get_by_role('link', name='我的', exact=True).click()
     expect(page.locator('.recovery-code code')).to_be_visible()
 
-    # 独立演示：后端真实任务/账本/结算引擎，三种结局可切换
-    page.goto('http://127.0.0.1:5173/#/demo')
-    expect(page.get_by_text('独立演示 · 不影响你的愿签')).to_be_visible(timeout=15000)
-    expect(page.get_by_role('heading', name='今天，也替心意走一小步')).to_be_visible(timeout=25000)
-    page.get_by_role('button', name='查看两幕结算').click()
-    expect(page.locator('.stamp')).to_be_visible(timeout=25000)
-    page.get_by_role('button', name='继续，打开问号抽屉').click()
-    expect(page.locator('.settle-sum strong')).to_be_visible()
-    page.screenshot(path=str(OUT / '05-settlement.png'), full_page=True)
-    page.get_by_label('演示结局').select_option('unfinished')
-    expect(page.locator('.stamp')).to_have_text('待续的心意', timeout=15000)
-    page.get_by_label('演示结局').select_option('cyber')
-    expect(page.locator('.stamp')).to_have_text('已还愿', timeout=15000)
-    page.get_by_role('button', name='退出演示').click()
+    # 流程速览：纯前端教程演示，无图片、无后端写入
+    page.goto('http://127.0.0.1:5173/#/tour')
+    expect(page.get_by_role('heading', name='三分钟，看完整段心意')).to_be_visible(timeout=15000)
+    assert '评委' not in page.locator('body').inner_text()
+    page.get_by_role('button', name='下一步').click()
+    expect(page.get_by_role('heading', name='替姥姥，许一个小小的愿')).to_be_visible()
+    page.get_by_role('button', name='下一步').click()
+    expect(page.get_by_role('heading', name='问题会跟着你的回答变')).to_be_visible()
+    page.get_by_role('button', name='下一步').click()
+    expect(page.get_by_role('heading', name='十天，每天两件小事')).to_be_visible()
+    page.get_by_role('button', name='下一步').click()
+    for day in range(3):
+        expect(page.get_by_role('heading', name=f'第 {day + 1} 天的小事')).to_be_visible()
+        while page.get_by_role('button', name='完成', exact=True).count():
+            page.get_by_role('button', name='完成', exact=True).first.click()
+        if day < 2:
+            page.get_by_role('button', name='下一天').click()
+    page.get_by_role('button', name='看看十天后').click()
+    expect(page.get_by_role('heading', name='十天的小事，攒成了一件真的事')).to_be_visible(timeout=5000)
+    page.screenshot(path=str(OUT / '05-tour-summary.png'), full_page=True)
+    page.get_by_role('button', name='下一步').click()
+    expect(page.get_by_role('heading', name='一张回家的往返车票')).to_be_visible()
+    expect(page.locator('.tour-egg')).to_be_visible()
+    page.screenshot(path=str(OUT / '05-tour-egg.png'), full_page=True)
+    page.get_by_role('button', name='回邮局').click()
+    expect(page.get_by_role('button', name='继续今天的小事', exact=True)).to_be_visible(timeout=20000)
 
     # 窄屏重排与响应式路由不溢出
     for width in [1920, 1440, 1280, 768, 375]:
         page.set_viewport_size({'width': width, 'height': 900})
-        for route in ['/', '/start', '/today', '/ledger', '/pool', '/me']:
+        for route in ['/', '/start', '/today', '/ledger', '/pool', '/me', '/tour']:
             page.goto(f'http://127.0.0.1:5173/#{route}')
             page.wait_for_timeout(150)
             overflow = page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth + 1')

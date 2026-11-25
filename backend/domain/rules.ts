@@ -47,9 +47,17 @@ export type GiftCategory = 'health' | 'company' | 'life' | 'heart';
 export const PRONOUNS = ['she', 'he', 'they'] as const;
 export type Pronoun = (typeof PRONOUNS)[number];
 
-/** 契约天数（PRD 3.4）：只允许这三档，默认 7 */
-export const CONTRACT_DAYS = [7, 14, 30] as const;
-export const DEFAULT_CONTRACT_DAYS = 7;
+/**
+ * 契约天数：产品默认且前端固定十天。
+ * 7/14/30 仅保留给旧客户端与内部回归测试，产品界面不再提供选择。
+ */
+export const CONTRACT_DAYS = [7, 10, 14, 30] as const;
+export const DEFAULT_CONTRACT_DAYS = 10;
+/** 续期由用户在结算页自选 1~5 天 */
+export const MIN_EXTEND_DAYS = 1;
+export const MAX_EXTEND_DAYS = 5;
+export const EXTEND_DAY_OPTIONS = [1, 2, 3, 4, 5] as const;
+export type ExtendDays = (typeof EXTEND_DAY_OPTIONS)[number];
 
 /** 库内档位（tasks.side / task_templates.side）与接口档位（type）的映射，只在这里定义一次 */
 export type TaskSide = 'for_ta' | 'for_self' | 'money';
@@ -59,6 +67,73 @@ export const SIDE_TO_TYPE: Record<TaskSide, TaskType> = { for_ta: 'ta', for_self
 export const SIDE_SEQ: Record<TaskSide, number> = { for_ta: 1, for_self: 2, money: 3 };
 /** 每天必做两条（1 为 TA + 1 为自己），钱任务只在周末追加且可选 */
 export const MUST_SIDES: readonly TaskSide[] = ['for_ta', 'for_self'];
+
+/**
+ * 任务标签词表：每个 2~3 字，一条任务可带 1~3 个。
+ * 标签不拼进任务文案，避免破坏 tasks 的 UNIQUE(wish_id, text)。
+ */
+export const TASK_TAGS = [
+  '陪伴', '沟通', '心意', '健康', '自理', '生活', '省钱', '赚钱', '记录', '行动', '学业', '情绪',
+] as const;
+export type TaskTag = (typeof TASK_TAGS)[number];
+
+/** 金钱任务的两种口径：省钱 / 赚钱 */
+export type MoneyKind = 'save' | 'earn';
+export const MONEY_KINDS: readonly MoneyKind[] = ['save', 'earn'];
+
+/** 旧数据/旧模板没有 money_kind 时，按文案关键词确定性推断 */
+export function deriveMoneyKind(side: string, text: string): MoneyKind | '' {
+  if (side !== 'money') return '';
+  return /兼职|答疑|转卖|收入|挣|工资|代课|接单/.test(text) ? 'earn' : 'save';
+}
+
+const CATEGORY_TAG: Record<string, TaskTag> = {
+  body: '健康',
+  sleep: '健康',
+  lonely: '陪伴',
+  study: '学业',
+  emotion: '情绪',
+  life: '生活',
+};
+
+/**
+ * 任务标签的确定性派生：种子导入与旧任务兜底共用同一套规则。
+ * 优先级：基础标签（心意/自理/省钱/赚钱）→ 行为标签（沟通/陪伴/行动/记录）→ 愿望类型标签。
+ */
+export function deriveTaskTags(input: {
+  wishType: string;
+  side: string;
+  text: string;
+  moneyKind?: string;
+}): TaskTag[] {
+  const tags: TaskTag[] = [];
+  const add = (tag: TaskTag) => {
+    if (!tags.includes(tag) && tags.length < 3) tags.push(tag);
+  };
+  const category = CATEGORY_TAG[input.wishType];
+
+  if (input.side === 'money') {
+    const kind = (input.moneyKind ?? deriveMoneyKind(input.side, input.text)) || 'save';
+    add(kind === 'earn' ? '赚钱' : '省钱');
+    add(/外卖|奶茶|做饭|买|资料|账单/.test(input.text) ? '生活' : '行动');
+    return tags;
+  }
+
+  if (input.side === 'for_self') {
+    add('自理');
+    if (category) add(category);
+    if (/写|记|拍|截图|记录|清单/.test(input.text)) add('记录');
+    else if (/走|出门|散步|运动|拉伸|收拾|整理/.test(input.text)) add('行动');
+    return tags;
+  }
+
+  add('心意');
+  if (/电话|视频|聊天|消息|发|问|说|语音|通话|回复|夸/.test(input.text)) add('沟通');
+  if (/陪|回家|吃饭|一起|散步|走|坐|见面/.test(input.text)) add('陪伴');
+  if (/买|寄|带|查|修|做|跑|排|整理|订|教/.test(input.text)) add('行动');
+  if (category) add(category);
+  return tags;
+}
 
 /**
  * PRD 5.2 的关键词表：命中最多的一类获胜，同分按 WISH_TYPES 顺序，无命中归「生活」。

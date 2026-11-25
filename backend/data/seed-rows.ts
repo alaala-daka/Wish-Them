@@ -751,19 +751,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
       },
       {
-        "id": "6d561487-f436-4f04-846e-815b344d3d13",
+        "id": "6fd6ab70-8f27-4bfa-8d1a-e34ae2fa139d",
         "wish_type": "body",
         "relation": null,
         "side": "for_ta",
-        "text": "提醒 TA 吃今天的药，回复到了再说一句“别省”。",
+        "text": "提醒 TA 吃今天的药，等 TA 回复后说一句“别省”。",
         "proof_kind": "screenshot",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
@@ -777,6 +789,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
@@ -790,6 +808,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
@@ -803,6 +827,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
@@ -816,19 +846,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
       },
       {
-        "id": "0f028739-7456-4980-8684-8bae0d66cc3e",
+        "id": "3c88d198-d203-4381-8b83-a255b7a16156",
         "wish_type": "body",
         "relation": null,
         "side": "for_ta",
-        "text": "今天陪 TA 走一段路，拍一张两个人的鞋。",
+        "text": "今天陪 TA 走一段路，拍一张一起走过的路。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
@@ -842,6 +884,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
@@ -855,19 +903,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
       },
       {
-        "id": "93824ea0-6fdf-46dd-868f-ae611681035e",
+        "id": "e6fbe733-92e4-4687-8650-d3bdea7e05b5",
         "wish_type": "body",
         "relation": "爷爷",
         "side": "for_ta",
-        "text": "教爷爷用一个动作缓解膝盖疼，拍下他做了一遍。",
+        "text": "教爷爷一个缓解膝盖疼的动作，拍下爷爷练习的样子。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
@@ -881,6 +941,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
@@ -894,6 +960,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
@@ -907,45 +979,69 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
       },
       {
-        "id": "8ae345cf-ceb5-46b5-8d60-6dc9705d67de",
+        "id": "bb22ec06-1457-4bb4-8593-fa174ea5bb73",
         "wish_type": "body",
         "relation": null,
         "side": "for_self",
-        "text": "给自己倒第三次水，拍一张杯子。",
+        "text": "给自己倒一杯温水，拍一张杯子。",
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
       },
       {
-        "id": "c53d039b-78fd-4231-8b2c-8df8660f5dcc",
+        "id": "808047a0-b070-4a65-83f3-9114d888963b",
         "wish_type": "body",
         "relation": null,
         "side": "for_self",
-        "text": "坐下两小时就起来拉伸一次，拍一张窗外的位置。",
+        "text": "坐久了就起来拉伸一次，拍一张窗外的风景。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
       },
       {
-        "id": "24941318-b7a3-4629-8c35-022ce548f63e",
+        "id": "0ad37a94-13f2-4956-8ae7-c0e7c7548371",
         "wish_type": "body",
         "relation": null,
         "side": "for_self",
-        "text": "把药盒按星期分好，拍一张分完的格子。",
+        "text": "把常吃的药按星期分好，拍一张分好的格子。",
         "proof_kind": "photo",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
@@ -959,45 +1055,67 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
       },
       {
-        "id": "0b5547a7-9457-453c-8e99-3f2680fc1708",
+        "id": "f0bd8869-859d-4900-85cf-2ca4db6ae0d6",
         "wish_type": "body",
         "relation": null,
         "side": "for_self",
-        "text": "把今天身体的不适记一行，没有就写“无”。",
+        "text": "把今天身体的不适写一行，没有就写“无”，拍下来。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
       },
       {
-        "id": "8f428444-a409-48e5-8b6d-32451167189e",
+        "id": "a941ff76-18aa-4a42-88f8-c248f352271a",
         "wish_type": "body",
         "relation": null,
         "side": "money",
-        "text": "本周奶茶不超过两杯，附账单截图。",
+        "text": "本周奶茶不超过两杯，把省下的钱记下来。",
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 500,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
       },
       {
-        "id": "c753baab-5c3a-482e-8a52-fbc1839cfae7",
+        "id": "73ebbc79-6408-44af-800b-ba4525ba40d7",
         "wish_type": "body",
         "relation": null,
         "side": "money",
-        "text": "周末陪 TA 去一趟药店，把花费记下来。",
+        "text": "周末陪 TA 去一趟药店，把比价省下的钱记下来。",
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 1000,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "行动"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true
@@ -1011,6 +1129,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
@@ -1024,19 +1148,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
       },
       {
-        "id": "c41d4c74-4502-46d9-8ad3-3b9961136ab8",
+        "id": "704a9a39-4c47-4aad-8b17-d2830481840e",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_ta",
-        "text": "和 TA 约定今晚同时熄灯，各自拍一张黑屏。",
+        "text": "和 TA 约定今晚同时熄灯，各自拍一张关灯后的房间。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
@@ -1050,19 +1185,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
       },
       {
-        "id": "7301fa97-13bf-4742-8576-f392f1bbc772",
+        "id": "9a8941ea-c90b-48c8-8384-a403dca7829b",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_ta",
-        "text": "把 TA 的床头灯换成暖光这件事，先问 TA 意见。",
+        "text": "先问问 TA 想不想把床头灯换成暖光。",
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
@@ -1076,6 +1223,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
@@ -1089,32 +1242,49 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
       },
       {
-        "id": "9e2249d0-d69c-4be8-87b0-ffd0c398b72b",
+        "id": "7a528949-eaea-4685-80c5-7b12974a6fe0",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_ta",
-        "text": "提醒 TA 睡前别喝浓茶，拍下 TA 的杯子。",
+        "text": "提醒 TA 睡前别喝浓茶，拍一张你自己的水杯。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
       },
       {
-        "id": "1ca8b685-5af9-4d06-8e36-fe7a3e40290f",
+        "id": "584d2864-065f-49de-8fc3-f7096b4cbad5",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_ta",
-        "text": "给 TA 写三行字的睡前语音，语音录下来。",
-        "proof_kind": "voice",
+        "text": "给 TA 发三行字的睡前消息，截图发送记录。",
+        "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
@@ -1128,6 +1298,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "健康"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
@@ -1141,32 +1317,50 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
       },
       {
-        "id": "1cea47a5-c178-47ab-825f-43115308e994",
+        "id": "802fddc8-11f6-4afd-89a2-fc68652c1805",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_self",
-        "text": "记录今天的入睡时间，写在备忘录截图。",
+        "text": "记录今天的入睡时间，截图备忘录。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
       },
       {
-        "id": "11c89e5a-f8b9-4354-8e97-bab0dff919a1",
+        "id": "b30ef65f-2680-4062-807c-811b3350f552",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_self",
-        "text": "睡前洗一次热水澡，拍一张浴室门口。",
+        "text": "睡前洗一次热水澡，拍一张浴室的暖灯。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
@@ -1180,6 +1374,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
@@ -1193,32 +1393,50 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
       },
       {
-        "id": "302bd5b4-849e-4cae-82d6-3dac08d9a037",
+        "id": "22f95378-8451-4a14-88c6-d15e753ec6e7",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_self",
-        "text": "关灯后只做三件与屏幕无关的事。",
-        "proof_kind": "none",
+        "text": "关灯后做三件与屏幕无关的事，拍一张床头。",
+        "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
       },
       {
-        "id": "1ec9d67e-675c-4739-811c-b44246ed34f0",
+        "id": "36aad84c-394c-4e4b-8a79-06d229e32086",
         "wish_type": "sleep",
         "relation": null,
         "side": "for_self",
-        "text": "今晚把手机放到够不着的地方充电，拍一张插座。",
+        "text": "今晚把手机放到够不着的地方充电，拍一张充电的位置。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
@@ -1232,19 +1450,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "健康",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
       },
       {
-        "id": "c6dfdf03-8ca8-434d-861e-18dd565399c8",
+        "id": "5e9979a8-c915-444b-8484-7414d509eb0a",
         "wish_type": "sleep",
         "relation": null,
         "side": "money",
-        "text": "周末陪 TA 买一副耳塞或眼罩，记录花费。",
+        "text": "帮 TA 挑一副耳塞或眼罩，把比价省下的钱记下来。",
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 1500,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "行动"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
@@ -1258,6 +1487,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 1200,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true
@@ -1271,6 +1505,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
@@ -1284,6 +1524,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
@@ -1297,19 +1543,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
       },
       {
-        "id": "5d50fd0a-a671-4d76-80fc-deb0e357eac2",
+        "id": "5b18adbc-2f10-4d65-8d63-0a14bf7a5f7a",
         "wish_type": "lonely",
         "relation": null,
         "side": "for_ta",
-        "text": "陪 TA 云看同一部电影，拍下进度条。",
+        "text": "陪 TA 云看同一部电影，截图播放进度。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
@@ -1323,6 +1580,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
@@ -1336,6 +1599,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
@@ -1349,6 +1618,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
@@ -1362,6 +1636,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
@@ -1375,45 +1654,67 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
       },
       {
-        "id": "d252a79b-171c-4437-8043-f1a274c652ce",
+        "id": "d7ef9045-5df3-4751-8bb3-7a39ec4e28d4",
         "wish_type": "lonely",
         "relation": "姥姥",
         "side": "for_ta",
-        "text": "回家一趟，和姥姥吃一顿饭，拍一张桌面。",
+        "text": "回家一趟，和姥姥吃一顿饭，拍一张饭桌。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
       },
       {
-        "id": "08d71a26-65f4-4f57-885c-c9a1c08ee92c",
+        "id": "dfda1a71-6381-44dd-859d-6dc2ba0c3dc1",
         "wish_type": "lonely",
         "relation": null,
         "side": "for_self",
-        "text": "今天主动约一个人一起吃饭，拍一张两人餐具。",
+        "text": "今天主动约一个人一起吃饭，拍一张两个人的餐具。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
       },
       {
-        "id": "d6da1bd7-29ee-4ded-8eae-3a70728f4434",
+        "id": "8617e4ff-4f8e-4812-8404-9662746b6712",
         "wish_type": "lonely",
         "relation": null,
         "side": "for_self",
-        "text": "和自己待三十分钟，不看手机，拍一张窗边。",
+        "text": "和自己待三十分钟，不看手机，拍一张窗外的风景。",
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
@@ -1427,19 +1728,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
       },
       {
-        "id": "7c6dacc1-d390-478b-872e-f3d575441113",
+        "id": "31308505-cabe-4c0e-8ae1-1c81d7645a6d",
         "wish_type": "lonely",
         "relation": null,
         "side": "for_self",
-        "text": "记下一件让你觉得“有人在场”的事。",
-        "proof_kind": "none",
+        "text": "记下一件让你觉得“有人在场”的事，拍一张写下的话。",
+        "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
@@ -1453,6 +1765,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
@@ -1466,6 +1784,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
@@ -1479,6 +1802,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
@@ -1492,6 +1821,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
@@ -1505,6 +1839,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 4000,
+        "money_kind": "earn",
+        "tags": [
+          "赚钱",
+          "行动"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
@@ -1518,45 +1857,67 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 2000,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true
       },
       {
-        "id": "029b01d0-b26b-417f-8e93-7b3f0db40be3",
+        "id": "17503813-58fd-4676-88b8-bf6ced77f5ec",
         "wish_type": "study",
         "relation": null,
         "side": "for_ta",
-        "text": "陪 TA 自习一小时，拍下两个人各自的桌面。",
+        "text": "陪 TA 自习一小时，拍一张你们各自的桌面。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
       },
       {
-        "id": "ea567b7a-48b8-4020-8724-619a5dbe64bd",
+        "id": "c7ce646b-519e-4f5e-80bc-0fb9c2f2a237",
         "wish_type": "study",
         "relation": null,
         "side": "for_ta",
-        "text": "给 TA 带一次饭，拍一张袋子。",
+        "text": "给 TA 带一次饭，拍一张饭盒。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
       },
       {
-        "id": "1cfdadda-0ceb-4f97-8425-fe34c61591cf",
+        "id": "b03d55c5-ac4a-4703-8e79-47b572505420",
         "wish_type": "study",
         "relation": null,
         "side": "for_ta",
-        "text": "听 TA 讲一遍今天卡住的那道题，录三十秒音。",
-        "proof_kind": "voice",
+        "text": "听 TA 讲一遍今天卡住的那道题，记下 TA 的思路。",
+        "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
@@ -1570,6 +1931,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
@@ -1583,19 +1950,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
       },
       {
-        "id": "76118dbb-33c5-4482-8f3e-7d3473484c13",
+        "id": "afbd8c8c-409a-43bf-80be-1a3d3cb2456e",
         "wish_type": "study",
         "relation": null,
         "side": "for_ta",
-        "text": "把 TA 的进度夸具体一点，不要只说“加油”。",
+        "text": "把 TA 的进度夸具体一点，截图发给 TA。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
@@ -1609,6 +1987,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
@@ -1622,19 +2006,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
       },
       {
-        "id": "93c997ad-cf5c-411a-8ddc-a6f67305ab16",
+        "id": "a70511a6-0a30-4602-8889-4a1700728df5",
         "wish_type": "study",
         "relation": null,
         "side": "for_ta",
-        "text": "今天 TA 说累了，只回一句“那就明天”。",
+        "text": "如果 TA 说累了，就回一句“那就明天”。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
@@ -1648,6 +2044,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "学业"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
@@ -1661,32 +2063,50 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
       },
       {
-        "id": "351a5e68-9d61-4a17-8f7c-135f452fe28a",
+        "id": "cbbdc6c8-f864-455a-8c96-80991ba7a472",
         "wish_type": "study",
         "relation": null,
         "side": "for_self",
-        "text": "把手机放到另一个房间学习四十分钟。",
-        "proof_kind": "none",
+        "text": "把手机放到另一个房间，学习四十分钟，拍一张书桌。",
+        "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
       },
       {
-        "id": "878e9bad-f07a-4423-8fdc-669adb291214",
+        "id": "e45e4a32-ce26-4b2a-8e5f-1e01209f7d90",
         "wish_type": "study",
         "relation": null,
         "side": "for_self",
-        "text": "写下今天真正推进的一件事。",
+        "text": "写下今天真正推进的一件事，拍一张纸。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
@@ -1700,19 +2120,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
       },
       {
-        "id": "68926bce-1c63-4ff4-81e1-a95383a94ced",
+        "id": "ab26a2a2-afba-4494-8ba6-90735a478262",
         "wish_type": "study",
         "relation": null,
         "side": "for_self",
-        "text": "早睡半小时，拍下关屏幕的时间。",
-        "proof_kind": "photo",
+        "text": "早睡半小时，截图屏幕使用时间。",
+        "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
@@ -1726,6 +2158,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
@@ -1739,6 +2177,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
@@ -1752,6 +2196,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "学业",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
@@ -1765,6 +2215,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 2000,
+        "money_kind": "earn",
+        "tags": [
+          "赚钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
@@ -1778,19 +2233,30 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 1500,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true
       },
       {
-        "id": "b759c572-0b4a-4b47-8e0f-b070d80b950b",
+        "id": "7ebebb12-ea2e-4140-80a3-a60f10af8999",
         "wish_type": "emotion",
         "relation": null,
         "side": "for_ta",
-        "text": "听 TA 说十分钟，中间不插话，录一段音。",
-        "proof_kind": "voice",
+        "text": "听 TA 说十分钟，中间不插话，记下一句 TA 说的话。",
+        "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
@@ -1804,6 +2270,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
@@ -1817,6 +2289,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
@@ -1830,6 +2308,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
@@ -1843,6 +2327,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
@@ -1856,6 +2346,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
@@ -1869,19 +2365,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
       },
       {
-        "id": "0dcb5cfe-88e1-4e95-8de9-4da542267851",
+        "id": "534cff95-09a5-48d3-8ddd-7d107565879c",
         "wish_type": "emotion",
         "relation": null,
         "side": "for_ta",
-        "text": "记住 TA 今天最在意的那件事，明天先问它。",
-        "proof_kind": "none",
+        "text": "把 TA 今天最在意的事记下来，明天先问这件事。",
+        "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
@@ -1895,19 +2403,29 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
       },
       {
-        "id": "02ca4f8a-15fd-45df-8af4-6aa154fadb12",
+        "id": "1db007f0-7e2b-459c-843d-27b8d7f7ca12",
         "wish_type": "emotion",
         "relation": "恋人",
         "side": "for_ta",
-        "text": "和 ta 把一件拖着没聊的事聊开，记下开始和结束时间。",
+        "text": "和 TA 把一件拖着没聊的事聊开，记下开始和结束时间。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "情绪"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
@@ -1921,19 +2439,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
       },
       {
-        "id": "c9d77fdc-ae82-458a-8708-5059f3b9e5c0",
+        "id": "c98d9452-7240-4dd2-8a68-0c52f3470d3b",
         "wish_type": "emotion",
         "relation": null,
         "side": "for_self",
-        "text": "今天不评价自己一次，把想说的“我真差”换成事实。",
-        "proof_kind": "none",
+        "text": "今天不评价自己一次，把“我真差”换成一句事实写下来。",
+        "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
@@ -1947,6 +2477,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
@@ -1960,6 +2496,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
@@ -1973,19 +2515,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
       },
       {
-        "id": "46eeafe8-e720-40c1-8079-66c63cd5cff1",
+        "id": "62982f26-5f50-44a8-810d-b286947c0241",
         "wish_type": "emotion",
         "relation": null,
         "side": "for_self",
-        "text": "早点睡，把今天的记录留到明天。",
+        "text": "早点睡，拍一张关灯后的床头。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
@@ -1999,19 +2553,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
       },
       {
-        "id": "935c054f-dbc8-42c2-87e7-b8545873f270",
+        "id": "a763910d-0049-4675-8d41-a4d543b37e84",
         "wish_type": "emotion",
         "relation": null,
         "side": "for_self",
-        "text": "把一句一直想说的话说出口，录下来。",
-        "proof_kind": "voice",
+        "text": "把一句一直想说的话写下来，拍一张纸。",
+        "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "情绪",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
@@ -2025,6 +2591,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 5000,
+        "money_kind": "earn",
+        "tags": [
+          "赚钱",
+          "行动"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
@@ -2038,6 +2609,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 1500,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true
@@ -2051,6 +2627,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 1,
         "is_active": true
@@ -2064,6 +2646,12 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 2,
         "is_active": true
@@ -2077,19 +2665,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 3,
         "is_active": true
       },
       {
-        "id": "efa85a33-9dca-4d4d-8c62-ca37d851ccd8",
+        "id": "f575496e-3a58-4ee9-8f14-da9c5b2a31df",
         "wish_type": "life",
         "relation": null,
         "side": "for_ta",
-        "text": "把 TA 家里坏掉的那个东西的维修方式发给 TA。",
+        "text": "把 TA 家里坏掉的那个东西的维修方式截图发给 TA。",
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "行动"
+        ],
         "weekend_only": false,
         "sort_order": 4,
         "is_active": true
@@ -2103,45 +2703,69 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 5,
         "is_active": true
       },
       {
-        "id": "f4d1d075-f4b3-402f-8716-5fe5c1953425",
+        "id": "8f7417a6-9e0d-43db-8a71-cefbea00ed07",
         "wish_type": "life",
         "relation": null,
         "side": "for_ta",
-        "text": "给 TA 做一次饭或点一顿靠谱的，拍一张桌面。",
+        "text": "给 TA 做一次饭或点一顿靠谱的，拍一张饭菜。",
         "proof_kind": "photo",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 6,
         "is_active": true
       },
       {
-        "id": "c0b8122b-3a6a-498b-82f7-f498101ddd2e",
+        "id": "fc48a60d-2103-430b-8e4e-8ce0b3e37fd8",
         "wish_type": "life",
         "relation": null,
         "side": "for_ta",
-        "text": "查好 TA 明天要走的路线，发给 TA。",
+        "text": "查好 TA 明天要走的路线，截图发给 TA。",
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "沟通",
+          "陪伴"
+        ],
         "weekend_only": false,
         "sort_order": 7,
         "is_active": true
       },
       {
-        "id": "533dc99d-4b6d-4420-89c2-9eea197b3cb4",
+        "id": "1cd0cdc3-d086-42fd-8d23-18a3d9c96f2a",
         "wish_type": "life",
         "relation": null,
         "side": "for_ta",
-        "text": "记下 TA 反复抱怨的那件小事，今天替 TA 做掉。",
+        "text": "记下 TA 反复抱怨的那件小事，今天替 TA 做掉，拍一张做完的样子。",
         "proof_kind": "photo",
         "time_slot": "any",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 8,
         "is_active": true
@@ -2155,19 +2779,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "陪伴",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 9,
         "is_active": true
       },
       {
-        "id": "a1f28e7d-0caa-4938-81f8-79689d06ab7d",
+        "id": "e69255e7-a6bc-49cf-822f-05dca543427f",
         "wish_type": "life",
         "relation": null,
         "side": "for_ta",
-        "text": "教 TA 用一个能省事的功能，录一段屏幕。",
+        "text": "教 TA 用一个能省事的功能，截图操作步骤。",
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "心意",
+          "行动",
+          "生活"
+        ],
         "weekend_only": false,
         "sort_order": 10,
         "is_active": true
@@ -2181,32 +2817,50 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 11,
         "is_active": true
       },
       {
-        "id": "8cbbded8-e108-455b-8386-bb514ee2e86c",
+        "id": "c5fea751-ca3f-43f9-8ff3-e4f075472a60",
         "wish_type": "life",
         "relation": null,
         "side": "for_self",
-        "text": "按时吃三顿，拍一张最难的那顿。",
+        "text": "今天按时吃三顿饭，拍下其中一顿。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 12,
         "is_active": true
       },
       {
-        "id": "b23e24be-df63-4d6b-880e-1b9aabd3ac4d",
+        "id": "346c82d4-7458-4aea-886e-43d110c3c9a9",
         "wish_type": "life",
         "relation": null,
         "side": "for_self",
-        "text": "今天不熬夜，拍下关屏幕的时间。",
-        "proof_kind": "photo",
+        "text": "今天不熬夜，截图屏幕使用时间。",
+        "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 13,
         "is_active": true
@@ -2220,19 +2874,31 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 14,
         "is_active": true
       },
       {
-        "id": "0f09e11e-544d-4473-86fb-c7fb91b48a8a",
+        "id": "e284953f-b98c-4c38-8591-879ce8284a6c",
         "wish_type": "life",
         "relation": null,
         "side": "for_self",
-        "text": "给自己买一次水果，拍一张袋子。",
+        "text": "给自己买一次水果，拍一张水果。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 15,
         "is_active": true
@@ -2246,45 +2912,68 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "evening",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 16,
         "is_active": true
       },
       {
-        "id": "4bfff8b2-fcb8-4ce0-8e65-636e91c89f0b",
+        "id": "b54b552c-6b9d-488a-8be7-bb865a7bcd8a",
         "wish_type": "life",
         "relation": null,
         "side": "for_self",
-        "text": "出门前把钥匙、校园卡、耳机清点一遍，拍一张桌面。",
+        "text": "出门前把钥匙、校园卡、耳机清点一遍，拍一张摆好的物品。",
         "proof_kind": "photo",
         "time_slot": "morning",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 17,
         "is_active": true
       },
       {
-        "id": "e008d2b4-9b8d-426e-8de2-0c73f75c67d3",
+        "id": "cb7444b6-4985-4e45-8ddc-a2275788f9c6",
         "wish_type": "life",
         "relation": null,
         "side": "for_self",
-        "text": "给自己十分钟，只整理一个角落。",
+        "text": "给自己十分钟，只整理一个角落，拍一张整理好的角落。",
         "proof_kind": "photo",
         "time_slot": "daytime",
         "min_budget_cents": 0,
+        "money_kind": "",
+        "tags": [
+          "自理",
+          "生活",
+          "记录"
+        ],
         "weekend_only": false,
         "sort_order": 18,
         "is_active": true
       },
       {
-        "id": "7a21edf2-50bd-4a16-81ff-a0cc2ab409d8",
+        "id": "acc77fca-1550-4e6b-8bed-2dd395c2728a",
         "wish_type": "life",
         "relation": null,
         "side": "money",
-        "text": "本周奶茶不超过两杯，附账单截图。",
+        "text": "本周奶茶不超过两杯，把省下的钱记下来。",
         "proof_kind": "screenshot",
         "time_slot": "any",
         "min_budget_cents": 1000,
+        "money_kind": "save",
+        "tags": [
+          "省钱",
+          "生活"
+        ],
         "weekend_only": true,
         "sort_order": 19,
         "is_active": true
@@ -2298,6 +2987,11 @@ export const SEED_TABLES: SeedTable[] = [
         "proof_kind": "screenshot",
         "time_slot": "daytime",
         "min_budget_cents": 4000,
+        "money_kind": "earn",
+        "tags": [
+          "赚钱",
+          "行动"
+        ],
         "weekend_only": true,
         "sort_order": 20,
         "is_active": true

@@ -15,7 +15,13 @@ import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RELATIONS, RELATION_GROUPS, WISH_TYPES } from '../../backend/domain/rules.ts';
+import {
+  RELATIONS,
+  RELATION_GROUPS,
+  WISH_TYPES,
+  deriveMoneyKind,
+  deriveTaskTags,
+} from '../../backend/domain/rules.ts';
 import type { Relation, WishType } from '../../backend/domain/rules.ts';
 import { WISH_TEMPLATES } from '../../database/seed/wish-templates.ts';
 import { TASK_TEMPLATES } from '../../database/seed/tasks.ts';
@@ -75,6 +81,13 @@ function buildTaskTemplates(): SeedRow[] {
       time_slot: tpl.slot,
       // 非钱任务恒为 0：DDL 是 NOT NULL DEFAULT 0，写 null 会在真实导入时被拒
       min_budget_cents: tpl.side === 'money' ? (tpl.minBudgetCents ?? 0) : 0,
+      money_kind: tpl.side === 'money' ? (tpl.moneyKind ?? deriveMoneyKind(tpl.side, tpl.text)) : '',
+      tags: tpl.tags ?? deriveTaskTags({
+        wishType: tpl.wishType,
+        side: tpl.side,
+        text: tpl.text,
+        moneyKind: tpl.moneyKind,
+      }),
       weekend_only: tpl.weekendOnly === true,
       sort_order: seq,
       is_active: true,
@@ -118,12 +131,19 @@ function assertShape(wishes: SeedRow[], tasks: SeedRow[], rewards: SeedRow[]): s
       if (!ofType.some((t) => t.side === side)) problems.push(`类型 ${type} 缺少 side=${side} 的任务，每日两张会选不出来`);
     }
     if (ofType.filter((t) => t.side === 'money').length > 4) problems.push(`类型 ${type} 的钱任务过多（${ofType.filter((t) => t.side === 'money').length} 条），易超出每周 1~2 个的约束`);
-    // 默认 7 天契约要能不轮转：通用为 TA ≥7、为自己 ≥8（关系专属只会让候选更多，不会更少）
+    // 十天契约末尾允许轮转（用户确认重复派任务即可），但前几天必须抽得出不同任务
     const genericTa = ofType.filter((t) => t.side === 'for_ta' && t.relation === null).length;
     const selfCount = ofType.filter((t) => t.side === 'for_self').length;
-    if (genericTa < 7) problems.push(`类型 ${type} 的通用「为 TA」只有 ${genericTa} 条，7 天契约会被迫轮转`);
-    if (selfCount < 8) problems.push(`类型 ${type} 的「为自己」只有 ${selfCount} 条，7 天契约会被迫轮转`);
+    if (genericTa < 7) problems.push(`类型 ${type} 的通用「为 TA」只有 ${genericTa} 条，前 7 天就会被追轮转`);
+    if (selfCount < 8) problems.push(`类型 ${type} 的「为自己」只有 ${selfCount} 条，前 8 天就会被追轮转`);
   }
+
+  const tagMissing = tasks.filter((t) => !Array.isArray(t.tags) || t.tags.length === 0);
+  if (tagMissing.length > 0) problems.push(`${tagMissing.length} 条任务缺标签`);
+  const tagBad = tasks.filter((t) => (t.tags as unknown[]).some((tag) => typeof tag !== 'string' || tag.length < 2 || tag.length > 3));
+  if (tagBad.length > 0) problems.push(`${tagBad.length} 条任务含非 2~3 字标签`);
+  const moneyKindMissing = tasks.filter((t) => t.side === 'money' && !['save', 'earn'].includes(String(t.money_kind)));
+  if (moneyKindMissing.length > 0) problems.push(`${moneyKindMissing.length} 条钱任务缺 money_kind（save/earn）`);
 
   const textTooLong = tasks.filter((t) => String(t.text).length > 60);
   if (textTooLong.length > 0) problems.push(`任务文案超 60 字：${textTooLong.map((t) => String(t.text).slice(0, 12)).join('、')}`);
