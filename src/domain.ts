@@ -7,6 +7,12 @@ export type Task = {
   title: string;
   status?: TaskStatus;
   dayIndex?: number;
+  /** 任务标签（1~3 个，2~3 字） */
+  tags: string[];
+  /** 钱任务口径：save / earn */
+  moneyKind?: 'save' | 'earn';
+  /** 打卡时填写的实际金额（分） */
+  amountCents?: number;
 };
 export type Wish = {
   id: string;
@@ -33,9 +39,26 @@ export type Checkin = {
   at: string;
   proofId?: string;
   isMakeup?: boolean;
+  amountCents?: number;
+  amountKind?: 'saved' | 'earned';
 };
 
 export type SettlementOutcome = 'double_realized' | 'cyber_only' | 'unrealized';
+export type EasterEggView = {
+  title: string;
+  direction: 'visit' | 'company' | 'health' | 'heart' | 'life';
+  summary: string;
+  plan_steps: string[];
+  cost_min_cents: number;
+  cost_max_cents: number;
+  realized_cents: number;
+  affordable: boolean;
+  gap_cents: number;
+  closing: string;
+  ai_label: string;
+  source: 'agent' | 'template';
+  model: string;
+};
 export type SettlementView = {
   wish_id: string;
   settlement_version: number;
@@ -91,13 +114,21 @@ export type SettlementView = {
     gap_band_label: string;
     copy_text: string;
     letter_text: string;
+    easter_egg?: EasterEggView | null;
   };
-  extension: { can_extend: boolean; renew_count: number; extend_days: number; reason: string };
+  extension: {
+    can_extend: boolean;
+    renew_count: number;
+    allowed_days: number[];
+    min_days: number;
+    max_days: number;
+    reason: string;
+  };
 };
 export type LedgerEntry = {
   id: string;
   week: string;
-  kind: 'budget' | 'expense' | 'income';
+  kind: 'budget' | 'expense' | 'income' | 'saved';
   amount: number;
   note: string;
   taskId?: string;
@@ -111,6 +142,17 @@ export type Draft = {
   text: string;
   answers: string[];
   ai: boolean;
+  /** 动态问卷的分支选择：每题选中的选项 id（可空） */
+  choices: string[];
+  /** 动态问卷的粗粒度档位，签契约时随答案一起提交 */
+  meta: {
+    giftCategory?: string;
+    aloneLevel?: string;
+    lastHome?: string;
+    travelBand?: string;
+    costBand?: string;
+    disposableBand?: string;
+  };
 };
 export type AppData = {
   version: 1;
@@ -161,6 +203,8 @@ export const emptyDraft = (): Draft => ({
   text: '',
   answers: ['', '', '', '', ''],
   ai: false,
+  choices: ['', '', '', '', ''],
+  meta: {},
 });
 export const emptyData = (): AppData => ({
   version: 1,
@@ -202,6 +246,22 @@ export function category(text: string) {
   }
   return best;
 }
+/** 前端本地示例/兜底用的标签派生，和后端词表保持同一套 2~3 字标签 */
+function localTags(kind: TaskKind, text: string): string[] {
+  if (kind === 'money') return ['省钱', '生活'];
+  if (kind === 'self') {
+    const tags = ['自理'];
+    if (/写|记|拍|截图|记录|清单/.test(text)) tags.push('记录');
+    else if (/走|出门|散步|运动|拉伸|收拾|整理/.test(text)) tags.push('行动');
+    return tags;
+  }
+  const tags = ['心意'];
+  if (/电话|视频|聊天|消息|发|问|说|语音|通话/.test(text)) tags.push('沟通');
+  if (/陪|回家|吃饭|一起|散步|见面/.test(text)) tags.push('陪伴');
+  if (tags.length < 3) tags.push('生活');
+  return tags;
+}
+
 export function createWish(draft: Draft, now = new Date()): Wish {
   if (
     !draft.name.trim() ||
@@ -231,11 +291,13 @@ export function createWish(draft: Draft, now = new Date()): Wish {
     '写下今天一件值得开心的小事',
   ];
   const tasks: Task[] = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 10; i++) {
     const date = addDays(start, i);
+    const taTitle = forTA[i % forTA.length].replace('{TA}', draft.name.trim());
+    const selfTitle = self[i % self.length];
     tasks.push(
-      { id: `${id}-${i}-ta`, date, kind: 'ta', title: forTA[i].replace('{TA}', draft.name.trim()) },
-      { id: `${id}-${i}-self`, date, kind: 'self', title: self[i] },
+      { id: `${id}-${i}-ta`, date, kind: 'ta', title: taTitle, tags: localTags('ta', taTitle) },
+      { id: `${id}-${i}-self`, date, kind: 'self', title: selfTitle, tags: localTags('self', selfTitle) },
     );
     const dow = new Date(date + 'T00:00:00Z').getUTCDay();
     if (dow === 0 || dow === 6)
@@ -244,6 +306,8 @@ export function createWish(draft: Draft, now = new Date()): Wish {
         date,
         kind: 'money',
         title: '做一件力所能及的小兼职，记录一次真实收入',
+        tags: ['赚钱', '行动'],
+        moneyKind: 'earn',
       });
   }
   return {
@@ -370,11 +434,14 @@ export function localSettlementView(data: AppData, now = new Date()): Settlement
       gap_band_label: '差一点',
       copy_text: '这份心意已经收好。等下一次见面，再慢慢告诉 TA。',
       letter_text: `亲爱的${data.wish?.name ?? 'TA'}：\n有些关心一直没好好说出口。最近我做了一些小事，也慢慢学着照顾自己。愿你一直被认真惦记着。`,
+      easter_egg: null,
     },
     extension: {
       can_extend: outcome !== 'double_realized',
       renew_count: 0,
-      extend_days: 7,
+      allowed_days: [1, 2, 3, 4, 5],
+      min_days: 1,
+      max_days: 5,
       reason: '',
     },
   };

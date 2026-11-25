@@ -6,6 +6,5 @@ export type Props = {
   data: AppData;
   update: Update;
   notify: (message: string) => void;
-  isDemo: boolean;
   actions: Actions;
 };

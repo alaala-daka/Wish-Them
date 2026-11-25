@@ -12,8 +12,23 @@
  * 线上入口是 backend/index.ts（Deno + 平台注入的 _qoder 客户端），不要在这里加业务逻辑。
  */
 import http from 'node:http';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createApp } from '../../backend/server.ts';
 import { createLocalDeps } from './deps.ts';
+
+/** 本地 .env 只用于开发；已有环境变量优先，不会被文件覆盖 */
+function loadDotEnv(): void {
+  const file = join(process.cwd(), '.env');
+  if (!existsSync(file)) return;
+  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);
+    if (!match || line.trim().startsWith('#')) continue;
+    const value = match[2].replace(/^['"]|['"]$/g, '');
+    if (process.env[match[1]] === undefined) process.env[match[1]] = value;
+  }
+}
+loadDotEnv();
 
 const PHYSICAL_PREFIX = '/functions/v1/app';
 const STORAGE_PREFIX = '/__storage';
@@ -21,7 +36,16 @@ const PORT = Number(process.env.PORT ?? 8787);
 // 本地开发用真实时钟，前端算出的「今天」才能和任务日期对上；冒烟测试仍用固定时钟。
 // 对象存储返回同源相对路径，开发时由 Vite 把 /__storage 代理到这里。
 // 本地反复联调/清缓存时不要被游客注册上限卡住（线上仍按配置的 10 次/小时执行）。
-const deps = createLocalDeps(new Date().toISOString(), { guestPerHour: 1000, demoPerHour: 1000 }, '/__storage');
+const deps = createLocalDeps(new Date().toISOString(), {
+  guestPerHour: 1000,
+  demoPerHour: 1000,
+  // 彩蛋：本地 .env 有 DEEPSEEK_API_KEY 时调用真实 DeepSeek；没有则自动走模板
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
+  deepseekBaseUrl: (process.env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com/v1').replace(/\/$/, ''),
+  deepseekModel: process.env.DEEPSEEK_MODEL ?? 'deepseek-chat',
+  aiEasterEggEnabled: process.env.AI_EASTER_EGG_ENABLED !== '0',
+  aiEasterEggTimeoutMs: Number(process.env.AI_EASTER_EGG_TIMEOUT_MS ?? 7000) || 7000,
+}, '/__storage');
 const app = createApp(deps);
 
 function readBody(req: http.IncomingMessage): Promise<Buffer> {

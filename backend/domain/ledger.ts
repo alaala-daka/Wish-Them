@@ -71,10 +71,11 @@ const CN_UNITS: Record<string, number> = {
   万: 10_000,
 };
 
-export type EntryType = 'expense' | 'earning';
+/** manual 只开放 expense / earning；saved 由金钱任务打卡内部写入 */
+export type EntryType = 'expense' | 'earning' | 'saved';
 
-const TYPE_TO_DB: Record<EntryType, string> = { expense: 'expense', earning: 'earned' };
-const DB_TO_TYPE: Record<string, EntryType> = { expense: 'expense', earned: 'earning' };
+const TYPE_TO_DB: Record<EntryType, string> = { expense: 'expense', earning: 'earned', saved: 'saved' };
+const DB_TO_TYPE: Record<string, EntryType> = { expense: 'expense', earned: 'earning', saved: 'saved' };
 
 /** 五问档位 → 首周默认预算；未知档位走兜底，保证确定性 */
 export function weeklyBudgetFromBand(band: string): number {
@@ -248,6 +249,7 @@ export async function ensureWeekBudgetRow(
 interface EntryTotals {
   expense: number;
   earning: number;
+  saved: number;
 }
 
 function centsOf(row: DbRow | undefined, column: string): number {
@@ -273,7 +275,7 @@ async function listEntries(db: DbClient, wishId: string): Promise<LedgerEntryRow
 
 function entryTotalsByWeek(entries: LedgerEntryRow[], weeks: string[]): Map<string, EntryTotals> {
   const totals = new Map<string, EntryTotals>();
-  for (const week of weeks) totals.set(week, { expense: 0, earning: 0 });
+  for (const week of weeks) totals.set(week, { expense: 0, earning: 0, saved: 0 });
   for (const entry of entries) {
     const week = String(entry.week_start ?? '');
     const bucket = totals.get(week);
@@ -282,6 +284,7 @@ function entryTotalsByWeek(entries: LedgerEntryRow[], weeks: string[]): Map<stri
     const amount = centsOf(entry, 'amount_cents');
     if (kind === 'expense') bucket.expense += amount;
     else if (kind === 'earned') bucket.earning += amount;
+    else if (kind === 'saved') bucket.saved += amount;
   }
   return totals;
 }
@@ -310,6 +313,9 @@ export interface LedgerWeekView {
   spent_yuan: number;
   income_cents: number;
   income_yuan: number;
+  /** 金钱任务打卡时用户自填的“省下”金额 */
+  task_saved_cents: number;
+  task_saved_yuan: number;
   balance_cents: number;
   balance_yuan: number;
   over_budget: boolean;
@@ -322,7 +328,12 @@ export interface LedgerTotalsView {
   counted_weeks: number;
   budget_cents: number;
   spent_cents: number;
+  /** 任务省下（有金钱任务流水时以它为准） */
   saved_cents: number;
+  /** 周预算结余（参考值；没有任务省下流水时作为旧愿签的兼容口径） */
+  budget_balance_cents: number;
+  /** 任务省下流水总额 */
+  task_saved_cents: number;
   income_cents: number;
   realized_cents: number;
   current_week_start: string;
@@ -384,12 +395,16 @@ export async function readLedger(
       budget,
       spent: money.expense,
       income: money.earning,
+      taskSaved: money.saved,
       counted: counted.has(weekStart),
     });
   });
 
   const selected = weeks.find((week) => week.week_start === targetWeek) ?? weeks[0];
-  const savedCents = weeks.filter((week) => week.counted).reduce((sum, week) => sum + week.balance_cents, 0);
+  const budgetBalanceCents = weeks.filter((week) => week.counted).reduce((sum, week) => sum + week.balance_cents, 0);
+  const taskSavedCents = weeks.reduce((sum, week) => sum + week.task_saved_cents, 0);
+  // 有任务省下流水时以用户自填金额为准；旧愿签没有这条流水时回退到周预算结余
+  const savedCents = taskSavedCents > 0 ? taskSavedCents : budgetBalanceCents;
   const incomeCents = weeks.reduce((sum, week) => sum + week.income_cents, 0);
   const spentCents = weeks.reduce((sum, week) => sum + week.spent_cents, 0);
   const budgetCents = weeks.reduce((sum, week) => sum + week.budget_cents, 0);
@@ -400,6 +415,8 @@ export async function readLedger(
     budget_cents: budgetCents,
     spent_cents: spentCents,
     saved_cents: savedCents,
+    budget_balance_cents: budgetBalanceCents,
+    task_saved_cents: taskSavedCents,
     income_cents: incomeCents,
     realized_cents: savedCents + incomeCents,
     current_week_start: effectiveCurrent,
@@ -439,6 +456,7 @@ interface WeekInput {
   budget: number;
   spent: number;
   income: number;
+  taskSaved: number;
   counted: boolean;
 }
 
@@ -460,6 +478,8 @@ function toLedgerWeekDto(input: WeekInput): LedgerWeekView {
     spent_yuan: yuan(input.spent),
     income_cents: input.income,
     income_yuan: yuan(input.income),
+    task_saved_cents: input.taskSaved,
+    task_saved_yuan: yuan(input.taskSaved),
     balance_cents: balance,
     balance_yuan: yuan(balance),
     over_budget: overBudget,

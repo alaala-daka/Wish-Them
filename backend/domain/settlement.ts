@@ -22,8 +22,9 @@ import { decryptField } from '../lib/crypto.ts';
 import { addDays, dayIndexOf, productDate, settleOpenAt, weekStartOf } from '../lib/time.ts';
 import { uuid } from '../lib/id.ts';
 import { issueMakeupTicket } from './checkin.ts';
+import { buildEasterEgg, type EasterEggView } from './easter-egg.ts';
 import { readLedger } from './ledger.ts';
-import { SIDE_TO_TYPE } from './rules.ts';
+import { EXTEND_DAY_OPTIONS, MAX_EXTEND_DAYS, MIN_EXTEND_DAYS, SIDE_TO_TYPE } from './rules.ts';
 import { findWish } from './wish.ts';
 import { insertPlannedTasks, listTasks, loadTaskPool, planTasks, sweepMissedTasks } from './task.ts';
 import type { GiftCategory } from './rules.ts';
@@ -38,7 +39,6 @@ export const OUTCOME_DOUBLE = 'double_realized';
 export const OUTCOME_CYBER = 'cyber_only';
 export const OUTCOME_UNREALIZED = 'unrealized';
 
-export const EXTEND_DAYS = 7;
 /** in_progress/settling 超过 60 秒视为崩溃残留，允许接管（与幂等表同口径） */
 const SETTLE_STALE_SECONDS = 60;
 const SETTLEMENTS_LIMIT = 10;
@@ -124,11 +124,16 @@ export interface SettlementView {
     gap_band_label: string;
     copy_text: string;
     letter_text: string;
+    /** 最终彩蛋：DeepSeek 生成或确定性模板兜底，随结算快照落库 */
+    easter_egg: EasterEggView | null;
   };
   extension: {
     can_extend: boolean;
     renew_count: number;
-    extend_days: number;
+    /** 可选续期天数（结算页转盘 1~5 天） */
+    allowed_days: number[];
+    min_days: number;
+    max_days: number;
     reason: string;
   };
 }
@@ -141,6 +146,7 @@ export interface SettleOutcome {
 export interface ExtendOutcome {
   wish: WishRow;
   new_end_date: string;
+  days: number;
   added_tasks: number;
   makeup_tickets: number;
   settle_open_at: string;
@@ -380,11 +386,19 @@ function copyTextOf(band: GapBand, gift: RewardRow, realizedCents: number, gapCe
   return `这封「未拆的信」先留在这里：累计兑现 ¥${realized}，离「${title}」的中位价 ¥${median} 还差 ¥${gap}。`;
 }
 
-function letterOf(outcome: string, band: GapBand, wish: WishRow, gift: RewardRow, realizedCents: number): string {
+function letterOf(
+  outcome: string,
+  band: GapBand,
+  wish: WishRow,
+  gift: RewardRow,
+  realizedCents: number,
+  focusTitle = '',
+): string {
   const name = text(wish.target_name) || 'TA';
   const title = text(wish.title) || '替 TA 许的愿';
   const realized = yuan(realizedCents);
-  const giftTitle = text(gift.title);
+  // 有彩蛋时信件跟着彩蛋的具体落点走，避免信里还提旧礼物名
+  const giftTitle = focusTitle || text(gift.title);
   if (outcome === OUTCOME_DOUBLE) {
     return `致 ${name}：\n这 ${intOf(wish, 'days')} 天里，我把每一件答应过的小事都做完了，也攒下了 ¥${realized}。\n「${title}」不是一句空话——它现在有了具体的落点：${giftTitle}。\n签收的时候，请把这张信纸也收好。`;
   }
@@ -500,6 +514,12 @@ export async function settleWish(
   const outcome = decideOutcome(stats);
   const ledger = await readLedger(db, asActive(current), null, now);
   const realized = ledger.totals.realized_cents;
+  // 彩蛋在结算时生成一次并存快照；失败/超时自动回退模板，不阻塞结算
+  const easterEgg = await buildEasterEgg(db, config, current, {
+    realizedCents: ledger.totals.realized_cents,
+    savedCents: ledger.totals.saved_cents,
+    earnedCents: ledger.totals.income_cents,
+  }, now);
   const hint = await readGiftHint(db, config, wishId);
   const category = giftCategoryOf(text(current.wish_type), hint);
   const rewards = await loadRewards(db, category);
@@ -548,9 +568,10 @@ export async function settleWish(
   const timestamp = now.toISOString();
   const summary = summaryFor(current, outcome, match.band, match.reward, match.gap_cents, ledger.totals.saved_cents, ledger.totals.counted_weeks);
   summary.copy_text = copyTextOf(match.band, match.reward, realized, match.gap_cents, summary);
-  summary.letter_template = letterOf(outcome, match.band, current, match.reward, realized);
+  summary.letter_template = letterOf(outcome, match.band, current, match.reward, realized, easterEgg.title);
   summary.matched_by = match.hint_matched ? 'gift_hint' : 'price_range';
   summary.gift_category = text(match.reward.category);
+  summary.easter_egg = easterEgg;
 
   const rowValues = {
     id: uuid(),
@@ -705,11 +726,16 @@ async function toSettlementView(db: DbClient, wish: WishRow, row: SettlementRow)
       gap_band_label: GAP_BANDS[band] ?? text(summary.gap_band_label),
       copy_text: text(summary.copy_text) || copyTextOf(band, { id: '', min_cents: min, max_cents: max, title: text(reward?.title) } as RewardRow, realized, gap, summary),
       letter_text: text(row.letter_text) || text(summary.letter_template),
+      easter_egg: (summary.easter_egg && typeof summary.easter_egg === 'object')
+        ? summary.easter_egg as EasterEggView
+        : null,
     },
     extension: {
       can_extend: canExtend,
       renew_count: renewCount,
-      extend_days: EXTEND_DAYS,
+      allowed_days: [...EXTEND_DAY_OPTIONS],
+      min_days: MIN_EXTEND_DAYS,
+      max_days: MAX_EXTEND_DAYS,
       reason: canExtend
         ? ''
         : outcome === OUTCOME_DOUBLE
@@ -723,7 +749,12 @@ async function toSettlementView(db: DbClient, wish: WishRow, row: SettlementRow)
  * 续期：仅赛博实现 / 未实现，且每个愿签一次。
  * 截止日 +7 天、回到 active，补生成新增天数的任务（派生 id 自动跳过已有任务），并补发对应周的补卡券。
  */
-export async function extendWish(db: DbClient, wish: WishRow, now: Date): Promise<ExtendOutcome> {
+export async function extendWish(db: DbClient, wish: WishRow, days: number, now: Date): Promise<ExtendOutcome> {
+  if (!Number.isInteger(days) || days < MIN_EXTEND_DAYS || days > MAX_EXTEND_DAYS) {
+    throw badRequest('invalid_parameter', `续期天数只能是 ${MIN_EXTEND_DAYS}~${MAX_EXTEND_DAYS} 天。`, {
+      fields: { days: `${MIN_EXTEND_DAYS}..${MAX_EXTEND_DAYS}` },
+    });
+  }
   const wishId = text(wish.id);
   const status = text(wish.status);
   // 先判次数：第一次续期后状态回到 active，第二次调用应明确提示「只能续期一次」
@@ -749,7 +780,7 @@ export async function extendWish(db: DbClient, wish: WishRow, now: Date): Promis
   if (startDate === '' || oldEnd === '') {
     throw badRequest('wish_not_active', '愿签没有完整的契约期，不能续期。', { status });
   }
-  const newEnd = addDays(oldEnd, EXTEND_DAYS);
+  const newEnd = addDays(oldEnd, days);
   const newDays = dayIndexOf(startDate, newEnd) + 1;
   const version = intOf(wish, 'version') || 1;
   const timestamp = now.toISOString();
@@ -759,7 +790,7 @@ export async function extendWish(db: DbClient, wish: WishRow, now: Date): Promis
       end_date: newEnd,
       days: newDays,
       renew_count: 1,
-      extend_mode: 'extend_7d',
+      extend_mode: `extend_${days}d`,
       outcome: '',
       settled_at: null,
       version: version + 1,
@@ -792,6 +823,7 @@ export async function extendWish(db: DbClient, wish: WishRow, now: Date): Promis
   return {
     wish: fresh,
     new_end_date: newEnd,
+    days,
     added_tasks: addedTasks,
     makeup_tickets: makeupTickets,
     settle_open_at: settleOpenAt(newEnd),

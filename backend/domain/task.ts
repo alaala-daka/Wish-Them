@@ -20,7 +20,16 @@ import { unavailable } from '../lib/errors.ts';
 import { sha256Hex, utf8 } from '../lib/crypto.ts';
 import { derivedUuid } from '../lib/id.ts';
 import { addDays, isWeekendDate, weekStartOf } from '../lib/time.ts';
-import { MUST_SIDES, SIDE_SEQ, SIDE_TO_TYPE, rotationTitle, seededRandom, shuffleWith } from './rules.ts';
+import {
+  MUST_SIDES,
+  SIDE_SEQ,
+  SIDE_TO_TYPE,
+  deriveMoneyKind,
+  deriveTaskTags,
+  rotationTitle,
+  seededRandom,
+  shuffleWith,
+} from './rules.ts';
 import type { TaskSide } from './rules.ts';
 import type { DbClient, DbRow } from '../lib/types.ts';
 
@@ -37,7 +46,7 @@ const ALL_SIDES: readonly TaskSide[] = ['for_ta', 'for_self', 'money'];
 export async function loadTaskPool(db: DbClient, wishType: string, relation: string): Promise<TaskTemplateRow[]> {
   const found = await rowsAs<TaskTemplateRow>(
     db.from('task_templates')
-      .select('id,wish_type,relation,side,text,proof_kind,time_slot,weekend_only,min_budget_cents,sort_order')
+      .select('id,wish_type,relation,side,text,proof_kind,time_slot,weekend_only,min_budget_cents,tags,money_kind,sort_order')
       .eq('is_active', true)
       .in('wish_type', [wishType, 'any'])
       .limit(POOL_LIMIT),
@@ -56,6 +65,10 @@ export interface PlannedTask {
   proof_kind: string;
   time_slot: string;
   min_budget_cents: number;
+  /** 任务标签（1~3 个，2~3 字）；模板没写时由规则派生 */
+  tags: string[];
+  /** 钱任务口径：save / earn；非钱任务为空字符串 */
+  money_kind: string;
   template_id: string | null;
   rotation: number;
   is_must: boolean;
@@ -87,6 +100,27 @@ function buildDeck(pool: TaskTemplateRow[], side: TaskSide, relation: string, ra
   return { templates: [...shuffleWith(tailored, random), ...shuffleWith(generic, random)], cursor: 0, rotation: 0 };
 }
 
+/** 模板标签可能是 jsonb 数组或 JSON 字符串；为空时用规则确定性派生 */
+function tagsOf(template: TaskTemplateRow, wishType: string, side: string, text: string, moneyKind: string): string[] {
+  const raw = template.tags;
+  if (Array.isArray(raw)) {
+    const tags = raw.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+    if (tags.length > 0) return tags.slice(0, 3);
+  }
+  if (typeof raw === 'string' && raw !== '') {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const tags = parsed.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+        if (tags.length > 0) return tags.slice(0, 3);
+      }
+    } catch {
+      // 坏数据回退派生，不让任务生成失败
+    }
+  }
+  return deriveTaskTags({ wishType, side, text, moneyKind });
+}
+
 /** 取下一张；一轮取完就进入下一轮（轮转副本），rotation 即轮次 */
 function draw(deck: Deck): { template: TaskTemplateRow; rotation: number } {
   if (deck.cursor >= deck.templates.length) {
@@ -102,6 +136,7 @@ function draw(deck: Deck): { template: TaskTemplateRow; rotation: number } {
 export async function planTasks(wish: DbRow, days: number, startDate: string, pool: TaskTemplateRow[]): Promise<PlannedTask[]> {
   const wishId = String(wish.id ?? '');
   const relation = String(wish.relation ?? '');
+  const wishType = String(wish.wish_type ?? '');
   const seedHex = await sha256Hex(utf8(`yuan-ta-task-v1:${wishId}`));
   const random = seededRandom(Number.parseInt(seedHex.slice(0, 8), 16));
   const decks = new Map<TaskSide, Deck>();
@@ -122,16 +157,22 @@ export async function planTasks(wish: DbRow, days: number, startDate: string, po
       // 钱任务池为空只跳过可选任务，不能连带必做任务一起失败
       if (deck.templates.length === 0) continue;
       const { template, rotation } = draw(deck);
+      const text = rotationTitle(String(template.text ?? ''), rotation);
+      const moneyKind = side === 'money'
+        ? (String(template.money_kind ?? '') || deriveMoneyKind(side, text))
+        : '';
       planned.push({
         day_index: day,
         task_date: taskDate,
         week_start: weekStartOf(taskDate),
         side,
         seq: SIDE_SEQ[side],
-        text: rotationTitle(String(template.text ?? ''), rotation),
+        text,
         proof_kind: String(template.proof_kind ?? 'photo'),
         time_slot: String(template.time_slot ?? 'any'),
         min_budget_cents: side === 'money' ? Number(template.min_budget_cents ?? 0) : 0,
+        tags: tagsOf(template, wishType, side, text, moneyKind),
+        money_kind: moneyKind,
         template_id: rotation === 0 ? String(template.id) : null,
         rotation,
         is_must: side !== 'money',
@@ -165,6 +206,8 @@ export async function insertPlannedTasks(db: DbClient, wish: DbRow, planned: Pla
       proof_kind: item.proof_kind,
       time_slot: item.time_slot,
       min_budget_cents: item.min_budget_cents,
+      tags: item.tags,
+      money_kind: item.money_kind,
       template_id: item.template_id,
       rotation: item.rotation,
       is_must: item.is_must,
@@ -244,15 +287,37 @@ export function summarizeTasks(tasks: TaskRow[], days: number): Record<string, u
   };
 }
 
+function parseStoredTags(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0).slice(0, 3);
+  }
+  if (typeof raw === 'string' && raw !== '') {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0).slice(0, 3);
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /** 接口词表（type/title）与库内词表（side/text）的唯一投影点，禁止把整行任务转 JSON 外发 */
 export function toTaskDto(task: TaskRow): Record<string, unknown> {
   const side = String(task.side ?? 'for_ta') as TaskSide;
+  const text = String(task.text ?? '');
+  const moneyKind = side === 'money'
+    ? (String(task.money_kind ?? '') || deriveMoneyKind(side, text))
+    : '';
+  const tags = parseStoredTags(task.tags);
   return {
     id: task.id,
     day_index: Number(task.day_index ?? 0),
     task_date: task.task_date,
     type: SIDE_TO_TYPE[side] ?? 'ta',
-    title: task.text,
+    title: text,
     status: task.status,
     is_must: task.is_must === true,
     is_optional: task.is_must !== true,
@@ -260,6 +325,8 @@ export function toTaskDto(task: TaskRow): Record<string, unknown> {
     proof_kind: task.proof_kind,
     time_slot: task.time_slot,
     min_budget_cents: Number(task.min_budget_cents ?? 0),
+    tags: tags.length > 0 ? tags : deriveTaskTags({ wishType: '', side, text, moneyKind }),
+    money_kind: moneyKind,
     rotation: Number(task.rotation ?? 0),
   };
 }

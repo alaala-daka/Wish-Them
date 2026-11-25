@@ -901,3 +901,32 @@ curl -s -X POST "$BASE/api/demo/reset" -H "authorization: Bearer $DEMO_TOKEN" \
 9. 批量写只用「派生 id + `insertIfAbsent(values, { onConflict: 'id' })`」；顺序固定为**先纯函数规划 → 再单行 CAS → 后批量落库**，不得先改状态再生成派生数据。
 10. 五问明文只允许出现在请求内存与后续轮的 `GET /api/wishes/:id/answers`；其余任何出口（详情、列表、契约、分享、公开池、导出、幂等存档）都不得含答案明文或 `*_enc` 密文列。
 11. 签名 URL（上传 PUT / 读取 GET）是短时能力：不写库、不进日志、不进幂等存档；对应路由用 `idempotent:'none'`，响应只回给当次请求。
+
+## 第 10 轮增量（十天 · 标签 · 金额任务 · 彩蛋 · 续期）
+
+- `POST /api/wishes/:id/contract`：产品默认且前端固定 `{ "days": 10 }`；7/14/30 仅为旧客户端与内部回归保留。
+- `Task` DTO 新增：
+  - `tags: string[]`（1~3 个，2~3 字）；
+  - `money_kind: "save" | "earn" | ""`；
+  - `checkin.amount_cents / amount_kind`（金额任务打卡时用户自填）。
+- `POST /api/tasks/:id/checkin`、`/makeup` 新增可选 `amount_cents`（整数分）：
+  - `side = money` 时必填，1~200000 分；
+  - 成功后自动写入一条 `ledger_entries`（`entry_kind = saved | earned`，`source = checkin`，绑定 `task_id/checkin_id`）；
+  - 同一任务重复打卡原地更新金额，不重复插流水。
+- `PUT /api/wishes/:id/answers` 新增可选 `meta`：
+  - `giftCategory`：`body|sleep|lonely|study|emotion|life`
+  - `aloneLevel`：`high|medium|low`
+  - `lastHome`：`recent|week|month|long`
+  - `travelBand`：`same_city|near|far|unknown`
+  - `costBand` / `disposableBand`：`under_100|100_299|300_599|600_999|1000_plus`
+  - 只写 `wish_answers` 的粗粒度档位列，原话仍只以密文保存。
+- `GET /api/wishes/:id/ledger` 的 `totals` 新增：
+  - `budget_balance_cents`：周预算结余（参考值）；
+  - `task_saved_cents`：钱任务省下流水；
+  - `saved_cents`：有任务省下流水时以它为准，否则回退到周预算结余（兼容旧愿签）。
+- `SettlementView.second_act` 新增 `easter_egg`：
+  - `title / direction / summary / plan_steps / cost_min_cents / cost_max_cents / affordable / gap_cents / closing / ai_label / source / model`；
+  - 结算时生成一次并存入 `settlements.self_summary.easter_egg`，读接口不再调用模型；无密钥/超时/坏输出时 `source = "template"`。
+- `SettlementView.extension` 改为：
+  - `allowed_days: [1,2,3,4,5]`、`min_days`、`max_days`、`can_extend`、`renew_count`、`reason`；
+  - `POST /api/wishes/:id/extend` 请求体 `{ "days": 1~5 }`，未传默认 1 天；每个愿签仍只续期一次。

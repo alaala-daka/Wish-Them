@@ -22,6 +22,7 @@ import { uuid } from '../lib/id.ts';
 import { enforceWindow, minuteWindow } from '../lib/quota.ts';
 import { dayIndexOf, makeupExpiresAt, productDate, weekStartOf } from '../lib/time.ts';
 import { findTask, sweepMissedTasks } from './task.ts';
+import { amountKindOfMoneyKind, normalizeAmountCents, recordCheckinAmount } from './task-money.ts';
 import type { TaskRow } from './task.ts';
 import type { WishRow } from './wish.ts';
 import type { AppConfig, DbClient, DbRow, Principal } from '../lib/types.ts';
@@ -33,6 +34,8 @@ export type MakeupTicketRow = DbRow & { id: string };
 export interface CheckinInput {
   proofId: string;
   note: string;
+  /** 金钱任务必填：用户自填的实际省下/挣到金额（分） */
+  amountCents?: number;
 }
 
 export interface CheckinOutcome {
@@ -115,6 +118,13 @@ async function storeCheckin(
 ): Promise<CheckinRow> {
   const timestamp = now.toISOString();
   const taskId = String(task.id);
+  const isMoney = String(task.side ?? '') === 'money';
+  const amountCents = isMoney && input.amountCents !== undefined
+    ? normalizeAmountCents(input.amountCents)
+    : null;
+  const amountKind = isMoney && amountCents !== null
+    ? amountKindOfMoneyKind(String(task.money_kind ?? ''))
+    : '';
   const checkinPatch = {
     wish_id: String(wish.id),
     user_id: String(wish.user_id ?? ''),
@@ -124,6 +134,8 @@ async function storeCheckin(
     is_makeup: isMakeup,
     channel: 'online',
     checkin_date: checkinDate,
+    amount_cents: amountCents,
+    amount_kind: amountKind,
     client_ts: null,
     server_ts: timestamp,
     revoked_at: null,
@@ -150,6 +162,8 @@ async function storeCheckin(
     is_makeup: isMakeup,
     channel: 'online',
     checkin_date: checkinDate,
+    amount_cents: amountCents,
+    amount_kind: amountKind,
     client_ts: null,
     server_ts: timestamp,
     revoked_at: null,
@@ -235,6 +249,12 @@ export async function checkinTask(
   if (!alreadyDone && status !== 'pending') {
     throw badRequest('invalid_task_state', '这条任务当前不能打卡。', { status });
   }
+  const amountCents = String(current.side ?? '') === 'money' && input.amountCents !== undefined
+    ? normalizeAmountCents(input.amountCents)
+    : undefined;
+  if (amountCents === null) {
+    throw badRequest('invalid_amount', '请填写这次实际省下或挣到的金额（整数元）。');
+  }
   // 先验证证明图片，再改任务状态：否则坏 proof 会留下「done 但没有打卡记录」的证据缺失任务，
   // 而结算只看 tasks.status，会把它当成已完成。
   const proof = await requireProofFile(db, principal.userId, String(wish.id), input.proofId);
@@ -254,7 +274,19 @@ export async function checkinTask(
     }
   }
 
-  const checkin = await storeCheckin(db, current, wish, proof, input, false, today, now);
+  const checkin = await storeCheckin(
+    db,
+    current,
+    wish,
+    proof,
+    { ...input, amountCents: amountCents ?? undefined },
+    false,
+    today,
+    now,
+  );
+  if (amountCents !== undefined && amountCents !== null) {
+    await recordCheckinAmount(db, wish, current, checkin, amountCents, now);
+  }
   await bumpWishVersion(db, String(wish.id), now);
 
   const fresh = await findTask(db, String(current.id));
@@ -305,6 +337,12 @@ export async function makeUpTask(
     });
   }
 
+  const amountCents = String(current.side ?? '') === 'money' && input.amountCents !== undefined
+    ? normalizeAmountCents(input.amountCents)
+    : undefined;
+  if (amountCents === null) {
+    throw badRequest('invalid_amount', '请填写这次实际省下或挣到的金额（整数元）。');
+  }
   const proof = await requireProofFile(db, principal.userId, String(wish.id), input.proofId);
   await issueMakeupTicket(db, wish, currentWeek, now);
   const ticket = await readMakeupTicket(db, String(wish.id), currentWeek, now);
@@ -345,7 +383,19 @@ export async function makeUpTask(
     throw conflict('task_state_conflict', '任务状态刚被改过，请刷新后重试。');
   }
 
-  const checkin = await storeCheckin(db, current, wish, proof, input, true, today, now);
+  const checkin = await storeCheckin(
+    db,
+    current,
+    wish,
+    proof,
+    { ...input, amountCents: amountCents ?? undefined },
+    true,
+    today,
+    now,
+  );
+  if (amountCents !== undefined && amountCents !== null) {
+    await recordCheckinAmount(db, wish, current, checkin, amountCents, now);
+  }
   await bumpWishVersion(db, String(wish.id), now);
 
   const freshTask = await findTask(db, String(current.id));
@@ -427,6 +477,8 @@ export function toCheckinDto(checkin: CheckinRow): Record<string, unknown> {
     task_id: checkin.task_id,
     proof_id: checkin.proof_file_id ?? null,
     note: String(checkin.note ?? ''),
+    amount_cents: checkin.amount_cents === null || checkin.amount_cents === undefined ? null : Number(checkin.amount_cents),
+    amount_kind: String(checkin.amount_kind ?? ''),
     is_makeup: checkin.is_makeup === true,
     channel: String(checkin.channel ?? 'online'),
     checkin_date: checkin.checkin_date,

@@ -46,7 +46,7 @@ export default async function wishContract(ctx: Ctx): Promise<Response> {
   const body = validate<Record<string, unknown>>(ctx.body, BODY);
   const days = body.value.days === undefined ? DEFAULT_CONTRACT_DAYS : Number(body.value.days);
   if (!(CONTRACT_DAYS as readonly number[]).includes(days)) {
-    throw badRequest('invalid_parameter', '契约天数只能是 7、14 或 30。', {
+    throw badRequest('invalid_parameter', '契约天数只能是 7、10、14 或 30；产品默认 10 天。', {
       fields: { days: `must be one of ${CONTRACT_DAYS.join('|')}` },
     });
   }

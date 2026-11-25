@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LockKeyhole } from 'lucide-react';
+import { LockKeyhole, MailOpen, Sparkles } from 'lucide-react';
 import { settleDue } from '../domain';
 import { go, Heading, Mascot, Paper, WishCard } from '../components';
 import NoWish from './NoWish';
@@ -11,7 +11,7 @@ const outcomeCopy = {
   unrealized: '把未完成的心意，慢慢接着做',
 } as const;
 
-export function Settle({ data, update, notify, isDemo, actions }: Props) {
+export function Settle({ data, update, notify, actions }: Props) {
   const view = data.settlement;
   const due = settleDue(data);
   const [act, setAct] = useState(1),
@@ -21,12 +21,16 @@ export function Settle({ data, update, notify, isDemo, actions }: Props) {
         `亲爱的${data.wish?.name || 'TA'}：\n有些关心一直没好好说出口。最近我做了一些小事，也慢慢学着照顾自己。愿你一直被认真惦记着。`,
     ),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [renewing, setRenewing] = useState(false),
+    [renewDays, setRenewDays] = useState(1),
+    [eggOpen, setEggOpen] = useState(false);
   const tried = useRef(false),
     letterTouched = useRef(false);
 
   useEffect(() => {
     setAct(1);
+    setEggOpen(false);
     tried.current = false;
   }, [data.wish?.id, view?.settlement_version, view?.first_act.outcome]);
 
@@ -36,14 +40,14 @@ export function Settle({ data, update, notify, isDemo, actions }: Props) {
 
   // 到期后进入结算页：真实账号自动请求一次结算；重复进入由服务端 already_settled 兜底。
   useEffect(() => {
-    if (!due || view || isDemo || tried.current) return;
+    if (!due || view || tried.current) return;
     tried.current = true;
     setBusy(true);
     actions
       .settle()
       .catch((e) => setError((e as Error).message || '结算暂时没有完成，请稍后重试。'))
       .finally(() => setBusy(false));
-  }, [due, view, isDemo, actions]);
+  }, [due, view, actions]);
 
   if (!data.wish)
     return (
@@ -137,12 +141,12 @@ export function Settle({ data, update, notify, isDemo, actions }: Props) {
             <>
               <span className="eyebrow">你的心意账本</span>
               <div className="settle-sum">
-                <span>省下 ¥{Math.floor(second.saved_cents / 100)}</span>
-                <span>＋ 挣到 ¥{Math.floor(second.earned_cents / 100)}</span>
+                <span>任务省下 ¥{Math.floor(second.saved_cents / 100)}</span>
+                <span>＋ 任务挣到 ¥{Math.floor(second.earned_cents / 100)}</span>
                 <strong>¥{second.realized_yuan}</strong>
               </div>
               <h2>{outcomeCopy[outcome]}</h2>
-              {second.gift && (
+              {!second.easter_egg && second.gift && (
                 <div className="gift-note">
                   <strong>{second.gift.title}</strong>
                   <p>{second.gift.note}</p>
@@ -152,7 +156,42 @@ export function Settle({ data, update, notify, isDemo, actions }: Props) {
                   </span>
                 </div>
               )}
-              <p>{second.copy_text}</p>
+              {!second.easter_egg && <p>{second.copy_text}</p>}
+              {second.easter_egg && (
+                !eggOpen ? (
+                  <div className="egg-sealed">
+                    <span className="eyebrow">最后一件小事</span>
+                    <MailOpen size={30} />
+                    <h2>这里还藏着一个彩蛋</h2>
+                    <p>用这十天攒下的钱，邮局替你想了一件事。</p>
+                    <button className="primary" onClick={() => setEggOpen(true)}>
+                      <Sparkles size={16} />
+                      拆开彩蛋
+                    </button>
+                  </div>
+                ) : (
+                  <div className="easter-egg revealed">
+                    <span className="eyebrow">
+                      拆开彩蛋 · {second.easter_egg.ai_label}
+                    </span>
+                    <h2>{second.easter_egg.title}</h2>
+                    <p>{second.easter_egg.summary}</p>
+                    <ol>
+                      {second.easter_egg.plan_steps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                    <span className="easter-cost">
+                      参考 ¥{Math.floor(second.easter_egg.cost_min_cents / 100)}–
+                      {Math.floor(second.easter_egg.cost_max_cents / 100)}
+                      {second.easter_egg.affordable
+                        ? ' · 现在已经够得着'
+                        : ` · 还差 ¥${Math.floor(second.easter_egg.gap_cents / 100)}`}
+                    </span>
+                    <p className="easter-closing">{second.easter_egg.closing}</p>
+                  </div>
+                )
+              )}
               <label>
                 写给TA的信
                 <textarea
@@ -182,30 +221,82 @@ export function Settle({ data, update, notify, isDemo, actions }: Props) {
               >
                 保存心意
               </button>
-              {view.extension.can_extend && !isDemo && (
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      await actions.extend();
-                      notify('已续期 7 天，新的任务已经补上。');
-                      go('/today');
-                    } catch (e) {
-                      notify((e as Error).message || '续期失败，请稍后再试。');
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  再续 7 天
-                </button>
+              {view.extension.can_extend && (
+                <div className="renew-box">
+                  <div className="section-label">
+                    <h2>要再续一段吗？</h2>
+                    <span className="tag">最多 5 天</span>
+                  </div>
+                  <p className="muted">
+                    不续也完全可以。这份心意已经好好收在这里；想继续的话，自己选一个长度就好。
+                  </p>
+                  <div className="renew-choice">
+                    <button
+                      className={renewing ? 'secondary' : 'primary'}
+                      onClick={() => setRenewing(false)}
+                    >
+                      先到这里
+                    </button>
+                    <button
+                      className={renewing ? 'primary' : 'secondary'}
+                      onClick={() => setRenewing(true)}
+                    >
+                      再续一段
+                    </button>
+                  </div>
+                  {!renewing && (
+                    <button className="text-button" onClick={() => go('/')}>
+                      带着这份心意回首页
+                    </button>
+                  )}
+                  {renewing && (
+                    <>
+                      <div className="renew-wheel" role="radiogroup" aria-label="选择续期天数">
+                        <div className="renew-wheel-face">
+                          {[1, 2, 3, 4, 5].map((day, index) => (
+                            <button
+                              key={day}
+                              type="button"
+                              role="radio"
+                              aria-checked={renewDays === day}
+                              className={renewDays === day ? 'selected' : ''}
+                              style={{ ['--i' as string]: index }}
+                              onClick={() => setRenewDays(day)}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                          <span className="renew-wheel-center">
+                            <strong>{renewDays}</strong>
+                            <small>天</small>
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="primary full"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            await actions.extend(renewDays);
+                            notify(`已续 ${renewDays} 天，新的任务已经补上。`);
+                            go('/today');
+                          } catch (e) {
+                            notify((e as Error).message || '续期失败，请稍后再试。');
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        {busy ? '正在续上…' : `再续 ${renewDays} 天`}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
               <button className="text-button" onClick={() => setAct(1)}>
                 再看一次约定
               </button>
-              {isDemo && <p className="muted">演示中的结果不会改变你的真实愿签。</p>}
             </>
           )}
         </Paper>

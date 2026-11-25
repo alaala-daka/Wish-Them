@@ -18,7 +18,7 @@
  *       404 task_not_found / 404 wish_not_found / 409 idempotency_key_reuse /
  *       409 checkin_conflict / 429 checkin_rate_limited（CHECKIN_PER_MINUTE，默认 10/分钟）
  */
-import { internal } from '../../../lib/errors.ts';
+import { badRequest, internal } from '../../../lib/errors.ts';
 import { ok } from '../../../lib/respond.ts';
 import { parseUuidParam, validate, type FieldSpec } from '../../../lib/validate.ts';
 import { checkinTask, requireTaskAuthor, toCheckinDto } from '../../../domain/checkin.ts';
@@ -37,6 +37,8 @@ export const route: RouteDef = {
 const BODY: Record<string, FieldSpec> = {
   proof_id: { type: 'uuid', required: true },
   note: { type: 'text', min: 0, max: 30 },
+  /** 金钱任务必填：用户自填的实际省下/挣到金额（分） */
+  amount_cents: { type: 'money', min: 1, maxCents: 200_000 },
 };
 
 export default async function taskCheckin(ctx: Ctx): Promise<Response> {
@@ -46,15 +48,21 @@ export default async function taskCheckin(ctx: Ctx): Promise<Response> {
   const body = validate<Record<string, unknown>>(ctx.body, BODY);
   const proofId = String(body.value.proof_id);
   const note = body.value.note === undefined ? '' : String(body.value.note);
+  const amountCents = body.value.amount_cents === undefined ? undefined : Number(body.value.amount_cents);
 
   const { task, wish } = await requireTaskAuthor(ctx.db, taskId, principal.userId);
+  if (String(task.side ?? '') === 'money' && amountCents === undefined) {
+    throw badRequest('amount_required', '金钱任务需要填写这次实际省下或挣到的金额。', {
+      fields: { amount_cents: 'required for money task' },
+    });
+  }
   const result = await checkinTask(
     ctx.db,
     ctx.config,
     principal,
     task,
     wish,
-    { proofId, note },
+    { proofId, note, amountCents },
     ctx.now,
   );
   return ok({

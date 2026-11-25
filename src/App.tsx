@@ -6,8 +6,6 @@ import {
   checkinTask,
   createReply,
   createWish as apiCreateWish,
-  demoScenario,
-  demoSession,
   extendWish,
   getPoolPost,
   listPool,
@@ -25,8 +23,6 @@ import {
 import {
   emptyData,
   emptyDraft,
-  demoData,
-  localSettlementView,
   productDay,
   weekStart,
   type AppData,
@@ -34,11 +30,12 @@ import {
 } from './domain';
 import { loadData, saveData } from './storage';
 import { clearSession, ensureSession, saveSession, type StoredSession } from './session';
-import { loadRemoteSnapshot, mapDemoState } from './remote';
+import { loadRemoteSnapshot } from './remote';
 import type { Actions } from './actions';
 import { go } from './components';
 import { Home, Today, Ledger, Pool, Mine, Settle } from './pages';
 import Create from './Create';
+import Tour from './pages/Tour';
 
 export type Update = (fn: (data: AppData) => AppData) => Promise<void>;
 
@@ -63,20 +60,14 @@ const pronounToApi = (pronoun: string): 'she' | 'he' | 'they' =>
   pronoun === '她' ? 'she' : pronoun === '他' ? 'he' : 'they';
 
 export default function App() {
-  const [route, setRoute] = useState(
-    location.hash.slice(1) ||
-      (location.pathname.startsWith('/demo') || location.search.includes('demo=1') ? '/demo' : '/'),
-  );
+  const [route, setRoute] = useState(location.hash.slice(1) || '/');
   const [data, setData] = useState<AppData | null>(null),
-    [demo, setDemo] = useState<AppData | null>(null),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
-    [notice, setNotice] = useState(''),
-    [demoOutcome, setDemoOutcomeState] = useState<'full' | 'cyber' | 'unfinished'>('full');
+    [notice, setNotice] = useState('');
   const stateRef = useRef<AppData | null>(null),
     localRef = useRef<AppData>(emptyData()),
     sessionRef = useRef<StoredSession | null>(null),
-    demoTokenRef = useRef(''),
     createKeyRef = useRef(''),
     queue = useRef(Promise.resolve());
 
@@ -125,6 +116,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // 流程速览是纯前端演示：不注册游客、不请求后端，后端没开也能完整走完
+      if (route === '/tour') return;
+      // 已加载过就不再重复拉取；从 /tour 返回时若还没加载，则在这里补一次
+      if (stateRef.current) return;
       const local = await loadData().catch(() => emptyData());
       localRef.current = local;
       const session = await ensureSession();
@@ -154,7 +149,7 @@ export default function App() {
       cancelled = true;
       window.removeEventListener('hashchange', onHash);
     };
-  }, [commit]);
+  }, [commit, route]);
 
   useEffect(() => {
     if (toast) {
@@ -170,33 +165,7 @@ export default function App() {
     }
   }, [notice]);
 
-  // 独立演示：优先使用后端真实演示引擎（任务/账本/结算都是真规则），失败时退回本机示例。
-  useEffect(() => {
-    if (route !== '/demo' || demo) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const result = await demoSession();
-        if (cancelled) return;
-        demoTokenRef.current = result.session.access_token;
-        setDemo(mapDemoState(result.state));
-      } catch {
-        if (cancelled) return;
-        setDemo(demoData());
-        notify('后端演示不可用，已切换为本机示例。');
-      }
-      go('/today');
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [route, demo, notify]);
-
   const update: Update = (fn) => {
-    if (demo) {
-      setDemo((d) => fn(d!));
-      return Promise.resolve();
-    }
     const operation = queue.current.then(async () => {
       const base = stateRef.current ?? localRef.current;
       const next = fn(base);
@@ -253,8 +222,8 @@ export default function App() {
         q3: draft.answers[2].trim(),
         q4: draft.answers[3].trim(),
         q5: draft.answers[4].trim(),
-      });
-      await signContract(session.token, created.wish.id, 7);
+      }, draft.meta as Record<string, string>);
+      await signContract(session.token, created.wish.id, 10);
       createKeyRef.current = '';
       const next = { ...(stateRef.current ?? localRef.current), draft: emptyDraft() };
       await persistLocal(next);
@@ -262,7 +231,7 @@ export default function App() {
       await refresh();
     },
 
-    async checkin(taskId: string, imageDataUrl: string, note: string) {
+    async checkin(taskId: string, imageDataUrl: string, note: string, amountCents?: number) {
       const session = requireSession();
       const proofId = await uploadImage(
         session.token,
@@ -270,11 +239,11 @@ export default function App() {
         'checkin_proof',
         requireWishId(),
       );
-      await checkinTask(session.token, taskId, proofId, note.trim());
+      await checkinTask(session.token, taskId, proofId, note.trim(), amountCents);
       await refresh();
     },
 
-    async makeup(taskId: string, imageDataUrl: string, note: string) {
+    async makeup(taskId: string, imageDataUrl: string, note: string, amountCents?: number) {
       const session = requireSession();
       const proofId = await uploadImage(
         session.token,
@@ -282,7 +251,7 @@ export default function App() {
         'checkin_proof',
         requireWishId(),
       );
-      await makeupTask(session.token, taskId, proofId, note.trim());
+      await makeupTask(session.token, taskId, proofId, note.trim(), amountCents);
       await refresh();
     },
 
@@ -311,9 +280,9 @@ export default function App() {
       await refresh();
     },
 
-    async extend() {
+    async extend(days: number) {
       const session = requireSession();
-      await extendWish(session.token, requireWishId());
+      await extendWish(session.token, requireWishId(), days);
       await refresh();
     },
 
@@ -365,84 +334,12 @@ export default function App() {
     refresh,
   };
 
-  const demoActions: Actions = {
-    ...actions,
-    async createWish() {
-      throw new Error('演示模式只读，退出演示后再许愿。');
-    },
-    async checkin() {
-      throw new Error('演示模式只读，退出演示后再记录。');
-    },
-    async makeup() {
-      throw new Error('演示模式只读，退出演示后再补卡。');
-    },
-    async setWeekBudget() {
-      throw new Error('演示模式只读，退出演示后再记账。');
-    },
-    async addLedgerEntry() {
-      throw new Error('演示模式只读，退出演示后再记账。');
-    },
-    async settle() {
-      throw new Error('演示结果由上方按钮切换。');
-    },
-    async extend() {
-      throw new Error('演示模式不支持续期。');
-    },
-    async polish() {
-      throw new Error('演示模式不调用 AI 润色。');
-    },
-    async listPool() {
-      return [];
-    },
-    async getPost() {
-      throw new Error('演示模式只展示示例愿签。');
-    },
-    async replyToPost() {
-      throw new Error('演示模式只读。');
-    },
-    async recover() {
-      throw new Error('请退出演示后再找回账号。');
-    },
-    async logout() {
-      throw new Error('请先退出演示。');
-    },
-    async refresh() {
-      // no-op
-    },
-  };
-
-  async function setDemoOutcome(outcome: 'full' | 'cyber' | 'unfinished') {
-    setDemoOutcomeState(outcome);
-    const backendOutcome =
-      outcome === 'full' ? 'double_realized' : outcome === 'cyber' ? 'cyber_only' : 'failed';
-    try {
-      const result = await demoScenario(demoTokenRef.current, backendOutcome);
-      setDemo(mapDemoState(result.state));
-    } catch {
-      const local = demoData(outcome);
-      setDemo({
-        ...local,
-        settlement: localSettlementView(local),
-        wishStatus: 'settled',
-        wish: local.wish ? { ...local.wish, status: 'settled' } : null,
-      });
-      notify('后端演示切换失败，已使用本机示例结局。');
-    }
-  }
-
-  async function openDemoSettlement() {
-    await setDemoOutcome(demoOutcome);
-    go('/settle');
-  }
-
-  const active = demo || data;
-  const pageActions = demo ? demoActions : actions;
+  const active = data;
   const pageProps = {
     data: active || emptyData(),
     update,
     notify,
-    isDemo: !!demo,
-    actions: pageActions,
+    actions,
   };
   const nav = [
     ['/', '邮局首页', Mail],
@@ -452,7 +349,8 @@ export default function App() {
     ['/me', '我的', UserRound],
   ] as const;
   let content;
-  if (!active) content = <div className="loading">{error || '正在打开暖木邮局…'}</div>;
+  if (route === '/tour') content = <Tour />;
+  else if (!active) content = <div className="loading">{error || '正在打开暖木邮局…'}</div>;
   else
     switch (route) {
       case '/':
@@ -476,9 +374,6 @@ export default function App() {
       case '/settle':
         content = <Settle {...pageProps} />;
         break;
-      case '/demo':
-        content = <div className="loading">正在准备演示…</div>;
-        break;
       default:
         content = (
           <div className="empty">
@@ -499,6 +394,7 @@ export default function App() {
       >
         跳到主要内容
       </a>
+      {route !== '/tour' && (
       <header className="topbar">
         <a href="#/" className="brand" aria-label="愿TA 邮局首页">
           <Mail strokeWidth={1.8} />
@@ -522,7 +418,8 @@ export default function App() {
           <Leaf size={16} /> 把心意带到现实
         </span>
       </header>
-      {notice && (
+      )}
+      {route !== '/tour' && notice && (
         <div className="recovery-banner" role="status">
           <strong>请保存恢复码</strong>
           <span>{notice}（换设备找回账号时使用，只展示这一次）</span>
@@ -551,42 +448,16 @@ export default function App() {
           </button>
         </div>
       )}
-      {demo && (
-        <div className="demo-bar">
-          <span>独立演示 · 不影响你的愿签</span>
-          <div>
-            <select
-              aria-label="演示结局"
-              value={demoOutcome}
-              onChange={(e) =>
-                void setDemoOutcome(e.target.value as 'full' | 'cyber' | 'unfinished')
-              }
-            >
-              <option value="full">双重兑现</option>
-              <option value="cyber">赛博实现</option>
-              <option value="unfinished">未完成</option>
-            </select>
-            <button onClick={() => void openDemoSettlement()}>查看两幕结算</button>
-            <button
-              onClick={() => {
-                setDemo(null);
-                demoTokenRef.current = '';
-                go('/');
-              }}
-            >
-              退出演示
-            </button>
-          </div>
-        </div>
-      )}
       <main id="main-content" tabIndex={-1}>
         {content}
       </main>
-      <footer className="site-footer">
-        <span>愿TA · 暖木愿望邮局</span>
-        <span>账号云端保存 · 五问与照片仅自己可见</span>
-        <span>每一件小事，都算数。</span>
-      </footer>
+      {route !== '/tour' && (
+        <footer className="site-footer">
+          <span>愿TA · 暖木愿望邮局</span>
+          <span>账号云端保存 · 五问与照片仅自己可见</span>
+          <span>每一件小事，都算数。</span>
+        </footer>
+      )}
       {toast && (
         <div className="toast" role="status">
           <Mail size={18} />

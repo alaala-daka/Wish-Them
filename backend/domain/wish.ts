@@ -203,6 +203,25 @@ export interface AnswersResult {
   updated_at: string;
 }
 
+/** 动态问卷的粗粒度结构化信息：只存枚举档位，不存原话 */
+export interface AnswerMeta {
+  giftCategory?: string;
+  aloneLevel?: string;
+  lastHome?: string;
+  travelBand?: string;
+  costBand?: string;
+  disposableBand?: string;
+}
+
+const ANSWER_META_COLUMNS: Record<keyof AnswerMeta, string> = {
+  giftCategory: 'q1_gift_category',
+  aloneLevel: 'q2_alone_level',
+  lastHome: 'q3_last_home',
+  travelBand: 'q3_travel_band',
+  costBand: 'q3_cost_band',
+  disposableBand: 'q4_disposable_band',
+};
+
 /**
  * 保存五问答案：部分提交，未提交的字段保持原值；明文只在本次请求内存里，落库全是密文。
  * 仅 draft 可改（签署后答案锁定，否则任务与结算的依据会被事后篡改）。
@@ -213,6 +232,7 @@ export async function saveAnswers(
   wish: WishRow,
   input: Record<string, string>,
   now: Date,
+  meta: AnswerMeta = {},
 ): Promise<AnswersResult> {
   if (String(wish.status ?? '') !== 'draft') {
     throw badRequest('answers_locked', '愿签已签署，五问答案不能再改。', { status: wish.status });
@@ -237,11 +257,17 @@ export async function saveAnswers(
   };
   const completed = ANSWER_FIELDS.every((field) => stored(field) !== '');
   const completedAt = completed ? String(existing?.completed_at ?? '') || timestamp : null;
-  // q4 档位在第 5 轮用于推算首周预算：明文只在内存里，落库只有档位
-  const q4Band = typeof input.q4 === 'string' && input.q4 !== '' ? disposableBandOf(input.q4) : '';
+  // q4 档位在第 5 轮用于推算首周预算：明文只在内存里，落库只有档位。
+  // 动态问卷会直接给出 disposableBand；自由填写时仍走确定性解析。
+  const q4Band = meta.disposableBand
+    ?? (typeof input.q4 === 'string' && input.q4 !== '' ? disposableBandOf(input.q4) : '');
 
   const patch: Record<string, unknown> = { updated_at: timestamp, completed_at: completedAt };
   for (const [column, value] of Object.entries(cipher)) patch[column] = value;
+  for (const [key, column] of Object.entries(ANSWER_META_COLUMNS)) {
+    const value = meta[key as keyof AnswerMeta];
+    if (typeof value === 'string' && value !== '') patch[column] = value.slice(0, 32);
+  }
   if (q4Band !== '') patch.q4_disposable_band = q4Band;
 
   if (existing) {
@@ -272,6 +298,10 @@ export async function saveAnswers(
       updated_at: timestamp,
     };
     for (const [column, value] of Object.entries(cipher)) answerValues[column] = value;
+    for (const [key, column] of Object.entries(ANSWER_META_COLUMNS)) {
+      const value = meta[key as keyof AnswerMeta];
+      if (typeof value === 'string' && value !== '') answerValues[column] = value.slice(0, 32);
+    }
     const inserted = await write(
       db.from('wish_answers').insertIfAbsent(answerValues, { onConflict: 'wish_id' }).select('id'),
       'insert wish answers',

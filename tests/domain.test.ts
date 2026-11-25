@@ -15,16 +15,26 @@ test('中国时区04:00分日，不受运行机器时区影响', () => {
   assert.equal(productDay(new Date('2026-11-20T20:00:00Z')), '2026-11-21');
   assert.equal(weekStart('2026-11-22'), '2026-11-16');
 });
-test('七天各两件必做，钱任务只在周末，任务不重复', () => {
+test('十天各两件必做，钱任务只在周末，末尾允许轮转', () => {
   const wish = createWish(
     { ...emptyDraft(), text: '希望妈妈睡好觉' },
     new Date('2026-11-16T04:00:00Z'),
   );
-  assert.equal(wish.tasks.filter((t) => t.kind !== 'money').length, 14);
+  assert.equal(wish.tasks.filter((t) => t.kind !== 'money').length, 20);
   assert.equal(new Set(wish.tasks.map((t) => t.title)).size, 15);
   assert.equal(wish.tasks.filter((t) => t.kind === 'money').length, 2);
   assert.equal(wish.tasks[0].date, '2026-11-16');
-  assert.equal(wish.tasks.at(-1)?.date, '2026-11-22');
+  assert.equal(wish.tasks.at(-1)?.date, '2026-11-25');
+  assert.ok(wish.tasks.every((task) => task.tags.length > 0));
+});
+test('周三开始也自动对齐现实周末：金额任务只落在周六周日', () => {
+  const wish = createWish(
+    { ...emptyDraft(), text: '希望妈妈睡好觉' },
+    new Date('2026-11-18T04:00:00Z'),
+  );
+  const moneyDates = wish.tasks.filter((task) => task.kind === 'money').map((task) => task.date);
+  assert.deepEqual(moneyDates, ['2026-11-21', '2026-11-22']);
+  assert.equal(wish.tasks[0].date, '2026-11-18');
 });
 test('自然周独立计算结余，超支不抵扣其他周，示例账本合计168', () => {
   const d = demoData();
