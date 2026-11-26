@@ -3,6 +3,7 @@
  *
  * 路径里没有 wish_id，因此 body 必填 wish_id（第 5 轮补充约定，见 docs/04 §0.1.4）。
  * - type=expense：非必要支出，0~200000 分，直接扣减当周结余；超预算不拦提交，结余记 0 并提示；
+ * - type=saved：手记省下一笔，1~200000 分，直接累加进愿望基金；
  * - type=earning：兼职收入，1~100000 分，必须关联本愿签内状态 done/made_up 的钱任务，
  *   且该任务与本条流水落在同一自然周；proof_id 可选（传入则须为 purpose=ledger_proof）。
  * 支出可选 proof_id，也可不传；每条记录只追加，不提供修改/删除。
@@ -41,7 +42,7 @@ export const route: RouteDef = {
 const BODY: Record<string, FieldSpec> = {
   wish_id: { type: 'uuid', required: true },
   week_start: { type: 'date', required: true },
-  type: { type: 'enum', required: true, values: ['expense', 'earning'] },
+  type: { type: 'enum', required: true, values: ['expense', 'earning', 'saved'] },
   amount_cents: { type: 'money', required: true, maxCents: MAX_EXPENSE_CENTS },
   note: { type: 'text', min: 0, max: 60 },
   proof_id: { type: 'uuid' },

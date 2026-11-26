@@ -425,8 +425,8 @@ async function prepareDemoContract(
 }
 
 /**
- * 初始人设：第 1、2 天各打一次卡（共 2 条），第一周记一笔 32 元支出。
- * 预算来自真实五问档位（q4 = 1000 → 20000 分/周），因此 20000 − 3200 = 16800 分 = 168 元。
+ * 初始人设：第 1、2 天各打一次卡（共 2 条），第一周记一笔 32 元支出，
+ * 并手记 168 元省下（演示口径：预算 200 − 支出 32 = 168）。
  */
 async function completeBaseline(
   db: DbClient,
@@ -447,6 +447,12 @@ async function completeBaseline(
 
   const doneTasks = (await listTasks(db, wishId)).filter((task) => isDone(String(task.status ?? '')));
   const firstWeek = String(doneTasks[0]?.week_start ?? weekStartOf(prepared.startDate));
+  // 演示账本：预算 200 + 支出 32 + 手记省下 168，和产品文案「累计 168 元」保持一致
+  const weekRow = await ensureWeekBudgetRow(db, prepared.wish, firstWeek, now);
+  await affected(
+    db.from('ledger_weeks').update({ budget_cents: 20_000, updated_at: now.toISOString() }).eq('id', String(weekRow.id)),
+    'set demo week budget',
+  );
   await addLedgerEntry(db, principal, prepared.wish, {
     weekStart: firstWeek,
     type: 'expense',
@@ -455,16 +461,15 @@ async function completeBaseline(
     proofId: null,
     taskId: null,
   }, now);
+  await addLedgerEntry(db, principal, prepared.wish, {
+    weekStart: firstWeek,
+    type: 'saved',
+    amountCents: 16_800,
+    note: '本周任务省下',
+    proofId: null,
+    taskId: null,
+  }, now);
 
-  // 两次打卡跨周时（今天是周二），第二周预算置 0，保证累计兑现仍恰好 168 元
-  const countedWeeks = [...new Set(doneTasks.map((task) => String(task.week_start ?? '')))].filter((week) => week !== '').sort();
-  for (const week of countedWeeks.slice(1)) {
-    const row = await ensureWeekBudgetRow(db, prepared.wish, week, now);
-    await affected(
-      db.from('ledger_weeks').update({ budget_cents: 0, updated_at: now.toISOString() }).eq('id', String(row.id)),
-      'zero demo week budget',
-    );
-  }
   await sweepMissedTasks(db, wishId, productDate(now), now);
 }
 
@@ -503,7 +508,7 @@ async function completePreparedDays(
   }
 }
 
-/** 账本补齐：每个契约周记一笔 32 元支出；满勤场景再给已完成的钱任务登记兼职收入 */
+/** 账本补齐：每个契约周记预算 200、支出 32、手记省下 168；满勤场景再给钱任务登记兼职收入 */
 async function fillDemoLedger(
   db: DbClient,
   principal: Principal,
@@ -515,11 +520,24 @@ async function fillDemoLedger(
   const tasks = await listTasks(db, String(fresh.id));
   const weeks = [...new Set(tasks.map((task) => String(task.week_start ?? '')))].filter((week) => week !== '').sort();
   for (const week of weeks) {
+    const weekRow = await ensureWeekBudgetRow(db, fresh, week, now);
+    await affected(
+      db.from('ledger_weeks').update({ budget_cents: 20_000, updated_at: now.toISOString() }).eq('id', String(weekRow.id)),
+      'set demo week budget',
+    );
     await addLedgerEntry(db, principal, fresh, {
       weekStart: week,
       type: 'expense',
       amountCents: DEMO_EXPENSE_CENTS,
       note: '这一周给妈妈买了点东西',
+      proofId: null,
+      taskId: null,
+    }, now);
+    await addLedgerEntry(db, principal, fresh, {
+      weekStart: week,
+      type: 'saved',
+      amountCents: 16_800,
+      note: '本周任务省下',
       proofId: null,
       taskId: null,
     }, now);

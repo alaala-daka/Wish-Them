@@ -22,7 +22,7 @@ import { decodeCursor, encodeCursor } from '../lib/cursor.ts';
 import { dailyWindow, enforceWindow } from '../lib/quota.ts';
 import { contractEndDate, productDate, settleOpenAt, weekStartOf } from '../lib/time.ts';
 import { issueMakeupTicket, readMakeupTicket, toMakeupTicketDto } from './checkin.ts';
-import { disposableBandOf, ensureWeekBudgetRow, weeklyBudgetFromBand } from './ledger.ts';
+import { disposableBandOf, ensureWeekBudgetRow } from './ledger.ts';
 import { DEFAULT_CONTRACT_DAYS, classifyWish, deriveTitle, relationGroupOf } from './rules.ts';
 import { insertPlannedTasks, listTasks, loadTaskPool, planTasks, summarizeTasks } from './task.ts';
 import type { TaskRow } from './task.ts';
@@ -357,14 +357,10 @@ export async function signContract(
   const wishId = String(wish.id);
   let contractDays = firstSign ? days : Number(wish.days);
   let startDate = firstSign ? productDate(now) : String(wish.start_date);
-  // 首周预算由 q4 档位推算；重复签署不再覆盖用户后续手动调整的愿签默认值
+  // 账本默认从 0 开始；周预算由用户在账本页自行设置，不再按 q4 档位预填
   let weeklyBudgetCents = Math.max(0, Math.trunc(Number(wish.weekly_budget_cents ?? 0)));
   if (firstSign) {
-    const answers = await first(
-      db.from('wish_answers').select('q4_disposable_band').eq('wish_id', wishId),
-      'read q4 band',
-    );
-    weeklyBudgetCents = weeklyBudgetFromBand(String(answers?.q4_disposable_band ?? ''));
+    weeklyBudgetCents = 0;
   }
   // 先规划再 CAS：候选池为空时直接失败，不会留下「active 但没有任务」的契约
   const pool = await loadTaskPool(db, String(wish.wish_type ?? ''), String(wish.relation ?? ''));

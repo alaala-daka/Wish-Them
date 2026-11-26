@@ -397,7 +397,7 @@ export const addLedgerEntry = (
   input: {
     wish_id: string;
     week_start: string;
-    type: 'expense' | 'earning';
+    type: 'expense' | 'earning' | 'saved';
     amount_cents: number;
     note?: string;
     task_id?: string;

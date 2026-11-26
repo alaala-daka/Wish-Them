@@ -325,19 +325,9 @@ export function createWish(draft: Draft, now = new Date()): Wish {
   };
 }
 export function totals(entries: LedgerEntry[]) {
-  const weeks = [...new Set(entries.map((e) => e.week))];
-  const saved = weeks.reduce((sum, week) => {
-    const rows = entries.filter((e) => e.week === week);
-    return (
-      sum +
-      Math.max(
-        0,
-        rows.filter((e) => e.kind === 'budget').reduce((s, e) => s + e.amount, 0) -
-          rows.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amount, 0),
-      )
-    );
-  }, 0);
-  const earned = entries.filter((e) => e.kind === 'income').reduce((s, e) => s + e.amount, 0);
+  // 只有用户确认过的省下金额才计入愿望基金；周预算结余仅作参考，默认 0。
+  const saved = entries.filter((e) => e.kind === 'saved').reduce((sum, e) => sum + e.amount, 0);
+  const earned = entries.filter((e) => e.kind === 'income').reduce((sum, e) => sum + e.amount, 0);
   return { saved, earned, total: saved + earned };
 }
 /** 结算是否已开放：优先用服务端 settle_open_at，演示/本机数据回退到本地规则。 */
@@ -474,6 +464,13 @@ export function demoData(outcome: 'full' | 'cyber' | 'unfinished' = 'full'): App
         kind: 'expense',
         amount: 32,
         note: '非必要支出',
+      },
+      {
+        id: 'demo-saved',
+        week: weekStart(d.wish.start),
+        kind: 'saved',
+        amount: 48,
+        note: '本周任务省下',
       },
       {
         id: 'demo-income',

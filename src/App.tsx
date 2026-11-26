@@ -266,7 +266,7 @@ export default function App() {
       await apiAddLedgerEntry(session.token, {
         wish_id: requireWishId(),
         week_start: weekStart(productDay()),
-        type: kind === 'income' ? 'earning' : 'expense',
+        type: kind === 'income' ? 'earning' : kind === 'saved' ? 'saved' : 'expense',
         amount_cents: cents,
         note: note.trim() || undefined,
         task_id: kind === 'income' ? taskId : undefined,

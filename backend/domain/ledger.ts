@@ -8,8 +8,9 @@
  *
  * 口径（docs/01 §6.2、docs/02 §8）：
  * - 周结余 = max(0, 周预算 − 周非必要支出)，超预算不拦提交，只把结余记 0；
- * - 周计入 = 该周至少一条任务 done/made_up；
- * - 累计兑现 = Σ 已计入周结余 + Σ 已确认兼职收入；
+ * - 周预算结余只作参考，不计入愿望基金；
+ * - 累计兑现 = Σ 用户确认的省下金额（金额任务打卡 + 本页手记）+ Σ 已确认收入；
+ * - 账本默认 0：没有金额任务打卡或手记时，累计心意保持 0；
  * - 结算前接口只返回金额与进度，绝不返回礼物名称、价格或匹配结果。
  */
 
@@ -25,29 +26,20 @@ import type { DbClient, DbRow, Principal } from '../lib/types.ts';
 export type LedgerEntryRow = DbRow & { id: string };
 export type LedgerWeekRow = DbRow & { id: string };
 
-/** 五问推算不出金额时的兜底：¥50/周 */
-export const DEFAULT_WEEKLY_BUDGET_CENTS = 5_000;
-/** 可由五问档位推算出的预算区间（不是用户手填上限） */
-export const MIN_DERIVED_BUDGET_CENTS = 2_000;
-export const MAX_DERIVED_BUDGET_CENTS = 20_000;
+/** 账本默认从 0 开始；周预算由用户在账本页自行设置 */
+export const DEFAULT_WEEKLY_BUDGET_CENTS = 0;
 /** 用户手填预算上限：¥2000/周，防整数溢出与误输入 */
 export const MAX_WEEKLY_BUDGET_INPUT_CENTS = 200_000;
 export const MAX_EXPENSE_CENTS = 200_000;
 export const MIN_EARNING_CENTS = 1;
 export const MAX_EARNING_CENTS = 100_000;
+/** 手记「省下一笔」的金额上限与支出一致 */
+export const MAX_MANUAL_SAVED_CENTS = 200_000;
 
 /** 契约最长 30 天，跨周最多 6 周；留一倍余量 */
 const WEEKS_LIMIT = 10;
 const WEEK_ROW_LIMIT = 20;
 const ENTRIES_LIMIT = 1_000;
-
-const BAND_BUDGET_CENTS: Record<string, number> = {
-  under_100: 2_000,
-  '100_299': 4_000,
-  '300_599': 8_000,
-  '600_999': 12_000,
-  '1000_plus': 20_000,
-};
 
 const CN_DIGITS: Record<string, number> = {
   零: 0,
@@ -71,20 +63,16 @@ const CN_UNITS: Record<string, number> = {
   万: 10_000,
 };
 
-/** manual 只开放 expense / earning；saved 由金钱任务打卡内部写入 */
+/** manual 只开放 expense / earning / saved；金额任务打卡内部也写 saved/earned */
 export type EntryType = 'expense' | 'earning' | 'saved';
 
 const TYPE_TO_DB: Record<EntryType, string> = { expense: 'expense', earning: 'earned', saved: 'saved' };
 const DB_TO_TYPE: Record<string, EntryType> = { expense: 'expense', earned: 'earning', saved: 'saved' };
 
-/** 五问档位 → 首周默认预算；未知档位走兜底，保证确定性 */
-export function weeklyBudgetFromBand(band: string): number {
-  return BAND_BUDGET_CENTS[band] ?? DEFAULT_WEEKLY_BUDGET_CENTS;
-}
-
 /**
  * 把 q4 明文归一到粗粒度档位（确定性解析，不依赖模型）。
  * 支持阿拉伯数字（含 万/千/百/k）与常见中文数字；识别不出时按「说不清/很少」处理。
+ * 注意：档位只用于彩蛋等展示，不再自动推算周预算（账本默认 0）。
  */
 export function disposableBandOf(answer: string): string {
   const text = answer.trim();
@@ -134,13 +122,10 @@ function parseMonthlyDisposable(text: string): number | null {
   return saw ? total + current : null;
 }
 
-/** 愿签上的默认周预算：签约时由 q4 档位写入；异常值回落到兜底 */
+/** 愿签上的默认周预算：用户没设置时保持 0，不再根据五问档位预填 */
 export function defaultWeeklyBudgetCents(wish: WishRow): number {
-  if (wish.weekly_budget_cents === null || wish.weekly_budget_cents === undefined) {
-    return DEFAULT_WEEKLY_BUDGET_CENTS;
-  }
-  const value = Number(wish.weekly_budget_cents);
-  if (!Number.isSafeInteger(value) || value < MIN_DERIVED_BUDGET_CENTS || value > MAX_DERIVED_BUDGET_CENTS) {
+  const value = Number(wish.weekly_budget_cents ?? 0);
+  if (!Number.isSafeInteger(value) || value < 0 || value > MAX_WEEKLY_BUDGET_INPUT_CENTS) {
     return DEFAULT_WEEKLY_BUDGET_CENTS;
   }
   return value;
@@ -328,11 +313,11 @@ export interface LedgerTotalsView {
   counted_weeks: number;
   budget_cents: number;
   spent_cents: number;
-  /** 任务省下（有金钱任务流水时以它为准） */
+  /** 用户确认的省下金额（金额任务打卡 + 本页手记），愿望基金的一部分 */
   saved_cents: number;
-  /** 周预算结余（参考值；没有任务省下流水时作为旧愿签的兼容口径） */
+  /** 周预算结余（参考值，不计入愿望基金） */
   budget_balance_cents: number;
-  /** 任务省下流水总额 */
+  /** 其中的省下流水总额（与 saved_cents 相同，保留字段兼容旧前端） */
   task_saved_cents: number;
   income_cents: number;
   realized_cents: number;
@@ -386,7 +371,7 @@ export async function readLedger(
 
   const weeks: LedgerWeekView[] = contract.weeks.map((weekStart) => {
     const row = rowByWeek.get(weekStart);
-    const money = moneyByWeek.get(weekStart) ?? { expense: 0, earning: 0 };
+    const money = moneyByWeek.get(weekStart) ?? { expense: 0, earning: 0, saved: 0 };
     const budget = row ? centsOf(row, 'budget_cents') : defaultWeeklyBudgetCents(wish);
     return toLedgerWeekDto({
       weekStart,
@@ -403,8 +388,9 @@ export async function readLedger(
   const selected = weeks.find((week) => week.week_start === targetWeek) ?? weeks[0];
   const budgetBalanceCents = weeks.filter((week) => week.counted).reduce((sum, week) => sum + week.balance_cents, 0);
   const taskSavedCents = weeks.reduce((sum, week) => sum + week.task_saved_cents, 0);
-  // 有任务省下流水时以用户自填金额为准；旧愿签没有这条流水时回退到周预算结余
-  const savedCents = taskSavedCents > 0 ? taskSavedCents : budgetBalanceCents;
+  // 只有用户确认过的省下金额（金额任务打卡 / 本页手记）才计入愿望基金；
+  // 周预算结余只作参考，不再兜底成累计金额，避免新账本默认出现 40 元。
+  const savedCents = taskSavedCents;
   const incomeCents = weeks.reduce((sum, week) => sum + week.income_cents, 0);
   const spentCents = weeks.reduce((sum, week) => sum + week.spent_cents, 0);
   const budgetCents = weeks.reduce((sum, week) => sum + week.budget_cents, 0);
@@ -584,6 +570,7 @@ export interface EntryOutcome {
 /**
  * 追加一条收支：
  * - 支出 0~200000 分，直接进入当周支出（超预算只影响结余）；
+ * - 手记省下 1~200000 分，直接计入愿望基金（与金额任务打卡写入的 saved 同一口径）；
  * - 兼职收入 1~100000 分，必须关联本愿签内状态 done/made_up 的钱任务；
  *   proof_id 可选（本轮明确口径：两段式上传未落地，不阻塞记账），传入则必须是合法的 ledger_proof；
  * - 同一钱任务只能确认一次收入（先读校验；表级无唯一索引，并发窗口见 docs/07）。
@@ -618,6 +605,11 @@ export async function addLedgerEntry(
       fields: { amount_cents: `${MIN_EARNING_CENTS}..${MAX_EARNING_CENTS}` },
     });
   }
+  if (input.type === 'saved' && (amount < MIN_EARNING_CENTS || amount > MAX_MANUAL_SAVED_CENTS)) {
+    throw badRequest('invalid_parameter', `手记省下必须在 ${MIN_EARNING_CENTS}~${MAX_MANUAL_SAVED_CENTS} 分之间。`, {
+      fields: { amount_cents: `${MIN_EARNING_CENTS}..${MAX_MANUAL_SAVED_CENTS}` },
+    });
+  }
 
   let proofId: string | null = null;
   if (input.proofId !== null) {
@@ -646,7 +638,7 @@ export async function addLedgerEntry(
       throw badRequest('duplicate_earning_link', '这条钱任务已经登记过收入了。', { task_id: taskId });
     }
   } else if (input.taskId !== null) {
-    throw badRequest('invalid_parameter', '支出记录不需要关联任务。', { fields: { task_id: 'not allowed for expense' } });
+    throw badRequest('invalid_parameter', '支出或手记省下不需要关联任务。', { fields: { task_id: 'not allowed here' } });
   }
 
   await ensureWeekBudgetRow(db, wish, input.weekStart, now);
@@ -683,7 +675,11 @@ export async function addLedgerEntry(
     progress: view.progress,
     notice: view.week.over_budget
       ? '本周已超预算，结余按 0 计，不再扣成负数。'
-      : input.type === 'expense' ? '支出已记入本周账本。' : '兼职收入已记入本周账本。',
+      : input.type === 'expense'
+        ? '支出已记入本周账本。'
+        : input.type === 'saved'
+          ? '省下的金额已累加到心愿基金。'
+          : '兼职收入已记入本周账本。',
   };
 }
 

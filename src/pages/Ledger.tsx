@@ -11,11 +11,11 @@ const kindLabel = (kind: LedgerEntry['kind']) =>
     : kind === 'expense'
       ? '非必要支出'
       : kind === 'saved'
-        ? '任务省下'
-        : '任务收入';
+        ? '省下'
+        : '收入';
 
 export function Ledger({ data, notify, actions }: Props) {
-  const [kind, setKind] = useState<'expense' | 'budget'>('expense'),
+  const [kind, setKind] = useState<'expense' | 'budget' | 'saved'>('expense'),
     [amount, setAmount] = useState(''),
     [note, setNote] = useState(''),
     [error, setError] = useState(''),
@@ -32,7 +32,11 @@ export function Ledger({ data, notify, actions }: Props) {
     }
     const cents = Math.round(yuan * 100);
     if (cents > 200_000) {
-      setError('单笔预算或支出不能超过 2000 元。');
+      setError('单笔金额不能超过 2000 元。');
+      return;
+    }
+    if (kind !== 'budget' && cents === 0) {
+      setError('金额需要大于 0 元。');
       return;
     }
     setBusy(true);
@@ -42,7 +46,13 @@ export function Ledger({ data, notify, actions }: Props) {
       else await actions.addLedgerEntry(kind, cents, note);
       setAmount('');
       setNote('');
-      notify('这一笔，已记到账本。');
+      notify(
+        kind === 'budget'
+          ? '本周预算已更新。'
+          : kind === 'saved'
+            ? '这笔省下，已累加进心愿基金。'
+            : '这一笔，已记到账本。',
+      );
     } catch (e) {
       setError((e as Error).message || '账目没有保存，请重试。');
     } finally {
@@ -65,11 +75,11 @@ export function Ledger({ data, notify, actions }: Props) {
       />
       <div className="ledger-summary">
         <Paper>
-          <span>任务省下</span>
+          <span>累计省下</span>
           <strong>¥{summary.saved}</strong>
         </Paper>
         <Paper>
-          <span>任务挣到</span>
+          <span>累计挣到</span>
           <strong>¥{summary.earned}</strong>
         </Paper>
         <Paper className="total">
@@ -84,7 +94,7 @@ export function Ledger({ data, notify, actions }: Props) {
             <span className="tag">按自然周记录</span>
           </div>
           <p className="muted">
-            任务省下/收入来自今日页打卡时填写的金额；周预算结余 = 预算 − 非必要支出，只作参考，不重复计入愿望基金。
+            金额任务的省下/收入会在今日页打卡时自动累加；也可以在这里手动记一笔省下。周预算结余只作参考，不计入累计心意。
           </p>
           {data.ledger.length ? (
             [...new Set(data.ledger.map((entry) => entry.week))]
@@ -110,7 +120,7 @@ export function Ledger({ data, notify, actions }: Props) {
             <div className="empty">
               <BookOpen size={36} />
               <h3>账本的第一页，留给今天</h3>
-              <p>先设一个周预算，再记录真实支出。</p>
+              <p>完成金额任务并填写实际金额，或在这里手动记一笔省下。</p>
             </div>
           )}
           <p className="muted">流水只追加、不提供删除；如需更正金额，请再记录一笔并说明。</p>
@@ -125,9 +135,10 @@ export function Ledger({ data, notify, actions }: Props) {
                 记账类型
                 <select
                   value={kind}
-                  onChange={(e) => setKind(e.target.value as 'expense' | 'budget')}
+                  onChange={(e) => setKind(e.target.value as 'expense' | 'budget' | 'saved')}
                 >
                   <option value="expense">非必要支出</option>
+                  <option value="saved">省下一笔</option>
                   <option value="budget">设置本周预算</option>
                 </select>
               </label>
@@ -152,7 +163,9 @@ export function Ledger({ data, notify, actions }: Props) {
                   placeholder="例如：本周少喝两杯奶茶"
                 />
               </label>
-              <p className="muted">钱任务的省下/收入会在今日页打卡时自动记入，不需要在这里重复填写。</p>
+              <p className="muted">
+                「省下一笔」会直接累加到累计心意；金额任务打卡填写的金额也会自动进来，不用重复填写。
+              </p>
               {error && (
                 <p className="form-error" role="alert">
                   {error}
