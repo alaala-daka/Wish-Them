@@ -117,11 +117,13 @@ export function mapLedger(view: LedgerViewDto | null): {
   if (!view) return { ledger: [] };
   const ledger: LedgerEntry[] = [];
   for (const week of view.weeks) {
+    const amount = Math.floor(week.budget_cents / 100);
+    if (amount <= 0) continue;
     ledger.push({
       id: `budget-${week.week_start}`,
       week: week.week_start,
       kind: 'budget',
-      amount: Math.floor(week.budget_cents / 100),
+      amount,
       note: '本周预算',
     });
   }
@@ -144,7 +146,7 @@ export function mapLedgerEntry(entry: LedgerEntryDto): LedgerEntry {
     week: entry.week_start,
     kind: entry.type === 'expense' ? 'expense' : entry.type === 'saved' ? 'saved' : 'income',
     amount: Math.floor(entry.amount_cents / 100),
-    note: entry.note || (entry.type === 'expense' ? '非必要支出' : entry.type === 'saved' ? '任务省下' : '兼职收入'),
+    note: entry.note || (entry.type === 'expense' ? '非必要支出' : entry.type === 'saved' ? '省下' : '收入'),
     taskId: entry.task_id ?? undefined,
   };
 }

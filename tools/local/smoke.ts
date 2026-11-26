@@ -845,11 +845,11 @@ let may20SelfId = '';
   const wishRow = ledgerDeps.db.rowsOf('wishes').find((row) => row.id === wishId);
   const answersRow = ledgerDeps.db.rowsOf('wish_answers').find((row) => row.wish_id === wishId);
   check('q4 落库为粗粒度档位', answersRow?.q4_disposable_band === '600_999', answersRow?.q4_disposable_band);
-  check('签约写入默认周预算 12000 分', Number(wishRow?.weekly_budget_cents) === 12_000, wishRow?.weekly_budget_cents);
+  check('签约写入默认周预算 0（不再按 q4 预填）', Number(wishRow?.weekly_budget_cents) === 0, wishRow?.weekly_budget_cents);
   const firstWeek = ledgerDeps.db.rowsOf('ledger_weeks').find((row) => row.wish_id === wishId && row.week_start === '2026-05-18');
-  check('签约即建首周账本行（预算 12000）', Number(firstWeek?.budget_cents) === 12_000 && Number(firstWeek?.week_index) === 1, firstWeek);
+  check('签约即建首周账本行（预算 0）', Number(firstWeek?.budget_cents) === 0 && Number(firstWeek?.week_index) === 1, firstWeek);
 
-  // 第二份愿签：验证另一档默认预算，并提供「别人的钱任务」用于越权校验
+  // 第二份愿签：账本同样默认 0，并提供「别人的钱任务」用于越权校验
   const otherCreated = await ledgerNewWish(newWish({ nickname: '姥爷' }), lgToken);
   const otherWishId = String((data(otherCreated).wish as Data).id);
   await ledgerCall({
@@ -859,8 +859,8 @@ let may20SelfId = '';
   await ledgerCall({ path: `/api/wishes/${otherWishId}/contract`, token: lgToken, body: { days: 7 } });
   const otherLedger = await ledgerCall({ path: `/api/wishes/${otherWishId}/ledger`, token: lgToken });
   check(
-    '另一档 q4（300_599）默认预算 8000',
-    otherLedger.status === 200 && (data(otherLedger).week as Data).budget_cents === 8_000,
+    '另一档 q4（300_599）默认预算同样为 0',
+    otherLedger.status === 200 && (data(otherLedger).week as Data).budget_cents === 0,
     (data(otherLedger).week as Data),
   );
 
@@ -903,9 +903,9 @@ let may20SelfId = '';
     const week = data(current).week as Data;
     const totals = data(current).totals as Data;
     check(
-      '默认返回当前周：预算 12000 / 支出 0 / 结余 12000',
-      current.status === 200 && week.week_start === '2026-05-18' && week.budget_cents === 12_000
-        && week.spent_cents === 0 && week.income_cents === 0 && week.balance_cents === 12_000
+      '默认返回当前周：预算 0 / 支出 0 / 结余 0',
+      current.status === 200 && week.week_start === '2026-05-18' && week.budget_cents === 0
+        && week.spent_cents === 0 && week.income_cents === 0 && week.balance_cents === 0
         && week.counted === false && week.is_current === true,
       week,
     );
@@ -1000,7 +1000,7 @@ let may20SelfId = '';
     check('支出负数 → 400', negative.status === 400 && negative.envelope.errorCode === 'invalid_parameter', negative.envelope);
     const fraction = await addEntry({ wish_id: wishId, week_start: '2026-05-18', type: 'expense', amount_cents: 1.5 });
     check('支出非整数 → 400', fraction.status === 400, fraction.envelope);
-    const badType = await addEntry({ wish_id: wishId, week_start: '2026-05-18', type: 'saved', amount_cents: 1 });
+    const badType = await addEntry({ wish_id: wishId, week_start: '2026-05-18', type: 'deposit', amount_cents: 1 });
     check('非法类型 → 400', badType.status === 400 && badType.envelope.errorCode === 'invalid_parameter', badType.envelope);
     const notMonday = await addEntry({ wish_id: wishId, week_start: '2026-05-19', type: 'expense', amount_cents: 1 });
     check('记账周起点非周一 → 400', notMonday.status === 400, notMonday.envelope);
@@ -1087,7 +1087,7 @@ let may20SelfId = '';
     );
   }
 
-  // 12e 跨周：历史锁、周聚合、累计兑现 = 已计入周结余 + 兼职收入
+  // 12e 跨周：历史锁、周聚合、累计兑现 = 任务省下 + 兼职收入
   {
     ledgerDeps.clock.advance(2 * 86_400_000); // 2026-05-26 06:00Z（周二，周起点 05-25）
     const current = await getLedger();
@@ -1123,7 +1123,7 @@ let may20SelfId = '';
 
     const totals = data(second).totals as Data;
     check(
-      '累计兑现 = 已计入周结余 7500 + 兼职收入 9000 = 16500',
+      '累计兑现 = 任务省下 7500 + 兼职收入 9000 = 16500',
       totals.saved_cents === 7_500 && totals.income_cents === 9_000 && totals.realized_cents === 16_500
         && totals.spent_cents === 17_501 && totals.counted_weeks === 2,
       totals,
@@ -1241,6 +1241,14 @@ let may20SelfId = '';
     court.call({ path: `/api/wishes/${id}/settlement`, token });
   const extendWishCall = (court: Court, id: string, token = court.token) =>
     court.call({ path: `/api/wishes/${id}/extend`, token, body: { days: 5 } });
+  /** 新的账本口径：只有用户确认的省下/收入才计入兑现，测试里显式补记任务省下 */
+  const addSaved = (court: Court, wishId: string, cents: number, week = '2026-05-18') =>
+    court.call({
+      path: '/api/ledger/entries',
+      token: court.token,
+      headers: { 'idempotency-key': crypto.randomUUID() },
+      body: { wish_id: wishId, week_start: week, type: 'saved', amount_cents: cents, note: '本周任务省下' },
+    });
 
   // 13a 时间闸门 / 双重兑现 / 168 元护膝仪 / 重复结算 / 权限
   {
@@ -1279,6 +1287,8 @@ let may20SelfId = '';
     await setTaskStatus(court, allTasks, 'done');
     const madeUpRow = allTasks.find((row) => row.side !== 'money' && row.is_must === true) as Data;
     await setTaskStatus(court, [madeUpRow], 'made_up');
+    const seededSaved = await addSaved(court, wishId, 16_800);
+    check('补记本周任务省下 168 元 → 200', seededSaved.status === 200, seededSaved.envelope);
 
     court.deps.clock.advance(toOpen - 1);
     const tooEarly = await settle(court, wishId);
@@ -1384,6 +1394,7 @@ let may20SelfId = '';
     await setTaskStatus(court, allTasks.filter((row) => row.side !== 'money'), 'done');
     await setTaskStatus(court, [moneyRows[0]], 'done');
     // 第二条钱任务保持 pending：结算时会被日界扫成 missed → 赛博实现
+    await addSaved(court, wishId, 16_800);
 
     court.deps.clock.advance(toOpen);
     const settled = await settle(court, wishId);
@@ -1514,6 +1525,7 @@ let may20SelfId = '';
       budgets: [['2026-05-18', 6_000], ['2026-05-25', 6_000]],
     });
     await setTaskStatus(nearCourt, tasksOf(nearCourt, nearWish), 'done');
+    await addSaved(nearCourt, nearWish, 12_000);
     nearCourt.deps.clock.advance(toOpen);
     const nearSettled = await settle(nearCourt, nearWish);
     const nearSecond = (((data(nearSettled).settlement as Data)?.second_act) ?? {}) as Data;
@@ -1534,6 +1546,7 @@ let may20SelfId = '';
       budgets: [['2026-05-18', 2_500], ['2026-05-25', 2_000]],
     });
     await setTaskStatus(farCourt, tasksOf(farCourt, farWish), 'done');
+    await addSaved(farCourt, farWish, 4_500);
     farCourt.deps.clock.advance(toOpen);
     const farSettled = await settle(farCourt, farWish);
     const farSecond = (((data(farSettled).settlement as Data)?.second_act) ?? {}) as Data;

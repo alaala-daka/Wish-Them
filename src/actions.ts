@@ -11,7 +11,7 @@ export type Actions = {
   makeup(taskId: string, imageDataUrl: string, note: string, amountCents?: number): Promise<void>;
   setWeekBudget(cents: number): Promise<void>;
   addLedgerEntry(
-    kind: 'expense' | 'income',
+    kind: 'expense' | 'income' | 'saved',
     cents: number,
     note: string,
     taskId?: string,
