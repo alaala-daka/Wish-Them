@@ -14,7 +14,7 @@ const kindLabel = (kind: LedgerEntry['kind']) =>
         ? '省下'
         : '收入';
 
-export function Ledger({ data, notify, actions }: Props) {
+export function Ledger({ data, notify, actions, isDemo }: Props) {
   const [kind, setKind] = useState<'expense' | 'budget' | 'saved'>('expense'),
     [amount, setAmount] = useState(''),
     [note, setNote] = useState(''),
@@ -129,6 +129,8 @@ export function Ledger({ data, notify, actions }: Props) {
           <h2>记下一笔</h2>
           {settled ? (
             <p className="muted">这份约定已经结算，账本已归档，不能再追加记录。</p>
+          ) : isDemo ? (
+            <p className="muted">演示模式只读；退出演示后可以记账。</p>
           ) : (
             <form onSubmit={submit}>
               <label>

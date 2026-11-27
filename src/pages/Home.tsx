@@ -1,5 +1,5 @@
-import { Mail, ClipboardCheck, Sprout, Heart, PlayCircle } from 'lucide-react';
-import { go, Mascot, Paper, PrivateNote } from '../components';
+import { Mail, ClipboardCheck, Sprout, Heart } from 'lucide-react';
+import { go, Mascot, Paper, PrivateNote, TourPopup } from '../components';
 import type { Props } from './types';
 
 export function Home({ data }: Props) {
@@ -48,17 +48,6 @@ export function Home({ data }: Props) {
           </div>
         </div>
       </div>
-      <Paper className="home-tour">
-        <div>
-          <span className="eyebrow">A LITTLE TOUR</span>
-          <h2>三分钟，看完整段心意</h2>
-          <p>不用等十天，跟着小愿走一遍：许愿、做小事、攒下一点钱，再拆开最后的彩蛋。</p>
-        </div>
-        <button className="secondary" onClick={() => go('/tour')}>
-          <PlayCircle size={17} />
-          流程速览
-        </button>
-      </Paper>
       <div className="home-steps">
         {[
           [Mail, '写下心愿', '为重要的TA，写下你的心意。'],
@@ -77,6 +66,7 @@ export function Home({ data }: Props) {
           );
         })}
       </div>
+      <TourPopup />
     </div>
   );
 }

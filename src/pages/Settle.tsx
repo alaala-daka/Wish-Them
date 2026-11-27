@@ -11,7 +11,7 @@ const outcomeCopy = {
   unrealized: '把未完成的心意，慢慢接着做',
 } as const;
 
-export function Settle({ data, update, notify, actions }: Props) {
+export function Settle({ data, update, notify, actions, isDemo }: Props) {
   const view = data.settlement;
   const due = settleDue(data);
   const [act, setAct] = useState(1),
@@ -40,14 +40,14 @@ export function Settle({ data, update, notify, actions }: Props) {
 
   // 到期后进入结算页：真实账号自动请求一次结算；重复进入由服务端 already_settled 兜底。
   useEffect(() => {
-    if (!due || view || tried.current) return;
+    if (!due || view || isDemo || tried.current) return;
     tried.current = true;
     setBusy(true);
     actions
       .settle()
       .catch((e) => setError((e as Error).message || '结算暂时没有完成，请稍后重试。'))
       .finally(() => setBusy(false));
-  }, [due, view, actions]);
+  }, [due, view, isDemo, actions]);
 
   if (!data.wish)
     return (
@@ -221,7 +221,8 @@ export function Settle({ data, update, notify, actions }: Props) {
               >
                 保存心意
               </button>
-              {view.extension.can_extend && (
+              {isDemo && <p className="muted">演示中的结果不会改变你的真实愿签。</p>}
+              {!isDemo && view.extension.can_extend && (
                 <div className="renew-box">
                   <div className="section-label">
                     <h2>要再续一段吗？</h2>

@@ -17,6 +17,7 @@ import {
   listWishes,
   me,
   type CheckinDto,
+  type DemoStateDto,
   type LedgerEntryDto,
   type LedgerViewDto,
   type TaskDto,
@@ -31,6 +32,7 @@ import type {
   TaskStatus,
   Wish,
 } from './domain';
+import { emptyDraft } from './domain';
 
 const TYPE_TO_CATEGORY: Record<string, string> = {
   body: '身体',
@@ -232,6 +234,41 @@ export async function loadRemoteSnapshot(token: string): Promise<RemoteSnapshot>
     settlement,
     makeupAvailable,
     currentUser: base.currentUser,
+  };
+}
+
+/** 演示会话状态 → 页面视图。演示 token 只读，写入操作在页面层禁用。 */
+export function mapDemoState(state: DemoStateDto): AppData {
+  const wish = mapWish(state.wish, state.tasks);
+  const checkins: Checkin[] = state.tasks
+    .filter((task) => task.status === 'done' || task.status === 'made_up')
+    .map((task) => ({
+      taskId: task.id,
+      image: '/assets/postoffice.png',
+      note: '演示记录',
+      at: task.task_date,
+    }));
+  const mapped = mapLedger(state.ledger);
+  return {
+    version: 1,
+    wish,
+    draft: {
+      ...emptyDraft(),
+      relation: wish.relation,
+      name: wish.name,
+      pronoun: wish.pronoun,
+      text: wish.text,
+    },
+    checkins,
+    ledger: mapped.ledger,
+    replies: {},
+    letter: state.settlement?.second_act.letter_text ?? '',
+    celebration: false,
+    wishStatus: state.wish.status,
+    settleOpenAt: state.settle_open_at,
+    settlement: state.settlement ?? undefined,
+    ledgerTotals: mapped.ledgerTotals,
+    currentUser: { id: 'demo', nickname: '体验官', isDemo: true },
   };
 }
 

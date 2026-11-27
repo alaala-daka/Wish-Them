@@ -303,6 +303,40 @@ export type ReplyDto = {
   created_at: string;
 };
 
+export type DemoStateDto = {
+  demo: {
+    session_id: string;
+    scenario: string;
+    mode: string;
+    step: number;
+    ttl_hours: number;
+    expires_at: string;
+    is_completed: boolean;
+    server_now: string;
+  };
+  persona: { label: string; relation: string; pronoun: string; wish_text: string; preset: string };
+  wish: WishDto;
+  progress: Record<string, number>;
+  today_tasks: TaskDto[];
+  tasks: TaskDto[];
+  ledger: LedgerViewDto | null;
+  settlement: import('./domain').SettlementView | null;
+  settle_open_at: string;
+};
+
+export type DemoSessionResult = {
+  session: {
+    demo_session_id: string;
+    access_token: string;
+    token_type: 'Bearer';
+    expires_at: string;
+    expires_in_seconds: number;
+  };
+  user: UserDto;
+  persona: DemoStateDto['persona'];
+  state: DemoStateDto;
+};
+
 export const guest = (nickname?: string) =>
   api<GuestResult>('/api/auth/guest', {
     body: { nickname, channel: 'other' },
@@ -477,6 +511,17 @@ export const createReply = (token: string, postId: string, content: string) =>
   api<{ reply: ReplyDto; post: { reply_count: number }; quota: { daily_remaining: number } }>(
     `/api/pool/${postId}/replies`,
     { token, body: { content } },
+  );
+
+export const demoSession = () => api<DemoSessionResult>('/api/demo/session', { body: {} });
+
+export const demoScenario = (token: string, outcome: 'double_realized' | 'cyber_only' | 'failed') =>
+  api<{ state: DemoStateDto; settlement: import('./domain').SettlementView }>(
+    '/api/demo/scenario',
+    {
+      token,
+      body: { outcome },
+    },
   );
 
 /** 两段式上传：presign → 对象存储 PUT → complete，返回可被业务接口引用的 file_id。 */

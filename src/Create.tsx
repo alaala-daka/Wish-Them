@@ -18,11 +18,13 @@ export default function Create({
   data,
   update,
   notify,
+  isDemo,
   actions,
 }: {
   data: AppData;
   update: Update;
   notify: (s: string) => void;
+  isDemo: boolean;
   actions: Actions;
 }) {
   const [draft, setDraft] = useState(data.draft),
@@ -218,12 +220,13 @@ export default function Create({
               </div>
               <button
                 className="secondary polish"
-                disabled={aiBusy}
+                disabled={aiBusy || isDemo}
                 onClick={() => void askAi()}
               >
                 <Feather size={16} />
                 {aiBusy ? '正在想表达…' : '帮我找找表达'}
               </button>
+              {isDemo && <p className="muted">演示模式不调用 AI 润色。</p>}
               {aiResult && (
                 <div className="suggestions">
                   <p className="muted">
