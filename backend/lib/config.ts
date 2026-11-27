@@ -93,8 +93,8 @@ export function loadConfig(): AppConfig {
     apiPerMinute: intEnv('API_PER_MINUTE', 1200, 60, 100_000),
     // 小程序与 H5 默认同源部署 ⇒ 空数组即不发 CORS 头；跨域时才按需配置
     corsAllowOrigins: (readEnv('CORS_ALLOW_ORIGINS') ?? '').split(',').map((o) => o.trim()).filter(Boolean),
-    // 平台批量写 seed 不可用时的服务端兜底：只在显式开启时于首个请求幂等补给
-    seedOnStart: boolEnv('SEED_ON_START', false),
+    // 目录表为空时于首个请求幂等补齐；表行数已达期望值时不会发起任何写请求
+    seedOnStart: boolEnv('SEED_ON_START', true),
     issuer: 'yuan-ta',
     audience: 'yuan-ta-api',
     apiVersion: 'v1',

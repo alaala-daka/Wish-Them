@@ -56,7 +56,7 @@ node tools/scripts/diff-schema.ts
 
 ## 关键设计
 
-- **文件即路由**：`backend/api/**/*.ts` 导出 `route` + 默认处理函数，`backend/manifest.ts` 是唯一登记处，`check-routes.ts` 从文件位置反推路径，防止「改了路径忘登记」。
+- **文件即路由**：`backend/routes/**/*.ts` 导出 `route` + 默认处理函数，`backend/manifest.ts` 是唯一登记处，`check-routes.ts` 从文件位置反推路径，防止「改了路径忘登记」。
 - **平台子集优先**：无事务、无 CHECK/触发器/外键、无 `date/numeric`；金额一律整数分，日期用 TEXT，唯一性用建表期表级 `UNIQUE`。一致性靠幂等键 + 单行 CAS + 派生 id + 读取时聚合 + 「快照先写、状态后收尾」。
 - **确定性规则**：愿望分类、标题派生、任务抽取（mulberry32 + sha256 种子）、轮转副本、三档结局、礼物匹配、差额档位全部是纯函数，不调用 AI、不用 `Math.random`；重放同一契约得到同一批任务。
 - **无 cron**：漏卡、券过期、上传过期、AI 缓存、幂等存档、演示会话全部在读写路径上惰性处理；演示每 IP 每次只清最早到期的 3 条会话。

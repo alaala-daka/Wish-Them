@@ -16,14 +16,14 @@
  * 4) method/auth/idempotent 取值合法；maxBodyBytes 为 0（无请求体，仅 GET/DELETE）或 128B~1MB；
  * 5) operation 形如 `module.action`，(method, path) 与 operation 都不重复；
  * 6) GET 不参与幂等（重放语义与只读冲突）；写接口 idempotent 不为 none 时必须有 operation；
- * 7) api 目录下不存在「有文件、没登记」的漏网路由。
+ * 7) routes 目录下不存在「有文件、没登记」的漏网路由。
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const API_DIR = join(ROOT, 'backend', 'api');
+const API_DIR = join(ROOT, 'backend', 'routes');
 const MANIFEST = join(API_DIR, 'manifest.ts');
 const METHODS = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'];
 const AUTH = ['none', 'bearer'];
@@ -115,7 +115,7 @@ const declared: Declared[] = [];
 for (const file of parseManifest(readFileSync(MANIFEST, 'utf8'))) {
   const absolute = normalize(join(API_DIR, file));
   if (!absolute.startsWith(API_DIR)) {
-    problems.push(`${file}: 指向 backend/api 之外`);
+    problems.push(`${file}: 指向 backend/routes 之外`);
     continue;
   }
   if (!existsSync(absolute)) {
@@ -185,7 +185,7 @@ const walk = (dir: string, prefix: string): void => {
     if (statSync(full).isDirectory()) { walk(full, `${prefix}${name}/`); continue; }
     if (!name.endsWith('.ts') || name === 'manifest.ts') continue;
     const relative = `${prefix}${name}`;
-    if (!registered.has(relative)) problems.push(`backend/api/${relative} 未在 manifest.ts 登记（线上会 404）`);
+    if (!registered.has(relative)) problems.push(`backend/routes/${relative} 未在 manifest.ts 登记（线上会 404）`);
   }
 };
 walk(API_DIR, '');

@@ -10,7 +10,7 @@
  * 本文件不依赖 Deno 专属 API，也不 import 平台注入模块（_qoder），
  * 因此本地可以用假数据库直接驱动同一套路由。
  */
-import { routes } from './api/manifest.ts';
+import { routes } from './routes/manifest.ts';
 import { ensureSeeded, markSeedEnabled } from './domain/seed-init.ts';
 import { authenticate, requirePrincipal } from './lib/auth.ts';
 import { ConfigError } from './lib/config.ts';
