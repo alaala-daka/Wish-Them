@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Heart, Leaf, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Heart, Leaf, X } from 'lucide-react';
 import { go, Mascot, Paper } from '../components';
+import { EggNotice } from './EggNotice';
 
-type TourStep = 'welcome' | 'wish' | 'questions' | 'contract' | 'days' | 'ellipsis' | 'summary' | 'egg' | 'end';
+type TourStep =
+  'welcome' | 'wish' | 'questions' | 'contract' | 'days' | 'ellipsis' | 'summary' | 'egg' | 'end';
 
 type TourTask = {
   id: string;
@@ -14,21 +16,62 @@ type TourTask = {
 
 const DAY_TASKS: Record<number, TourTask[]> = {
   1: [
-    { id: 'd1-ta', kind: 'ta', title: '给姥姥打一通电话，问问今天吃了什么。', tags: ['陪伴', '沟通', '生活'] },
-    { id: 'd1-self', kind: 'self', title: '按时吃一顿正经饭，拍一张餐盘。', tags: ['自理', '健康'] },
+    {
+      id: 'd1-ta',
+      kind: 'ta',
+      title: '给姥姥打一通电话，问问今天吃了什么。',
+      tags: ['陪伴', '沟通', '生活'],
+    },
+    {
+      id: 'd1-self',
+      kind: 'self',
+      title: '按时吃一顿正经饭，拍一张餐盘。',
+      tags: ['自理', '健康'],
+    },
   ],
   2: [
-    { id: 'd2-ta', kind: 'ta', title: '把今天的晚饭拍给姥姥，问她一个人吃了什么。', tags: ['心意', '陪伴', '生活'] },
+    {
+      id: 'd2-ta',
+      kind: 'ta',
+      title: '把今天的晚饭拍给姥姥，问她一个人吃了什么。',
+      tags: ['心意', '陪伴', '生活'],
+    },
     { id: 'd2-self', kind: 'self', title: '出门走十分钟，看看路边的树。', tags: ['自理', '行动'] },
-    { id: 'd2-money', kind: 'money', title: '本周自己做饭代替两次外卖，把省下的钱记下来。', tags: ['省钱', '生活'], amount: 60 },
+    {
+      id: 'd2-money',
+      kind: 'money',
+      title: '本周自己做饭代替两次外卖，把省下的钱记下来。',
+      tags: ['省钱', '生活'],
+      amount: 60,
+    },
   ],
   3: [
-    { id: 'd3-ta', kind: 'ta', title: '和姥姥约好周末回去吃一顿饭，记下她想吃什么。', tags: ['心意', '沟通', '陪伴'] },
-    { id: 'd3-self', kind: 'self', title: '把书桌收拾出一个空位，拍一张照片。', tags: ['自理', '行动'] },
+    {
+      id: 'd3-ta',
+      kind: 'ta',
+      title: '和姥姥约好周末回去吃一顿饭，记下她想吃什么。',
+      tags: ['心意', '沟通', '陪伴'],
+    },
+    {
+      id: 'd3-self',
+      kind: 'self',
+      title: '把书桌收拾出一个空位，拍一张照片。',
+      tags: ['自理', '行动'],
+    },
   ],
 };
 
-const STEP_ORDER: TourStep[] = ['welcome', 'wish', 'questions', 'contract', 'days', 'ellipsis', 'summary', 'egg', 'end'];
+const STEP_ORDER: TourStep[] = [
+  'welcome',
+  'wish',
+  'questions',
+  'contract',
+  'days',
+  'ellipsis',
+  'summary',
+  'egg',
+  'end',
+];
 
 const MASCOT_LINES: Record<TourStep, string> = {
   welcome: '我是小愿。今天不用等十天，我带你走一遍完整的心意旅程。',
@@ -215,7 +258,11 @@ export default function Tour() {
                       <div>
                         <h3>{task.title}</h3>
                         <span className="muted">
-                          {task.kind === 'ta' ? '为姥姥' : task.kind === 'self' ? '为自己' : '周末可选'}
+                          {task.kind === 'ta'
+                            ? '为姥姥'
+                            : task.kind === 'self'
+                              ? '为自己'
+                              : '周末可选'}
                         </span>
                       </div>
                       {task.kind === 'money' && !isDone && (
@@ -282,23 +329,30 @@ export default function Tour() {
 
           {step === 'egg' && (
             <div className="tour-center">
-              <span className="eyebrow">
-                拆开彩蛋 · <Sparkles size={13} /> AI辅助
-              </span>
-              <h1>一张回家的往返车票</h1>
-              <div className="easter-egg tour-egg revealed">
-                <p>
-                  用这十天攒下的 ¥680，把「北京 → 济南」的往返车票变成一次真的见面。回去那天，陪姥姥吃一顿饭，不急着走。
-                </p>
-                <ol>
-                  <li>先查北京到济南的周末车次，避开最贵的一班。</li>
-                  <li>把这笔钱单独放进一个信封，写上「给姥姥的车票」。</li>
-                  <li>回去那天，陪姥姥吃一顿饭，问问她最近一个人都在忙什么。</li>
-                </ol>
-                <span className="easter-cost">参考 ¥300–500 · 现在已经够得着</span>
-                <p className="easter-closing">有些距离，一张车票就能缩短。</p>
-              </div>
-              <p className="muted">真实使用时，彩蛋会结合你填写的城市、距离、预算和愿望方向来生成。</p>
+              <EggNotice
+                titleLevel={1}
+                className="tour-egg"
+                egg={{
+                  direction: 'visit',
+                  ai_label: 'AI辅助',
+                  title: '一张回家的往返车票',
+                  summary:
+                    '用这十天攒下的 ¥680，把「北京 → 济南」的往返车票变成一次真的见面。回去那天，陪姥姥吃一顿饭，不急着走。',
+                  plan_steps: [
+                    '先查北京到济南的周末车次，避开最贵的一班。',
+                    '把这笔钱单独放进一个信封，写上「给姥姥的车票」。',
+                    '回去那天，陪姥姥吃一顿饭，问问她最近一个人都在忙什么。',
+                  ],
+                  cost_min_cents: 30000,
+                  cost_max_cents: 50000,
+                  affordable: true,
+                  gap_cents: 0,
+                  closing: '有些距离，一张车票就能缩短。',
+                }}
+              />
+              <p className="muted">
+                真实使用时，彩蛋会结合你填写的城市、距离、预算和愿望方向来生成。
+              </p>
             </div>
           )}
 

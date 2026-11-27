@@ -1,21 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Camera,
-  Check,
-  CheckCheck,
-  Clock,
-  Heart,
-  ImagePlus,
-  Leaf,
-  LockKeyhole,
-  Sprout,
-  Upload,
-} from 'lucide-react';
 import { productDay, settleDue, weekStart, type Task } from '../domain';
 import { prepareImage } from '../storage';
-import { go, Heading, Mascot, Paper, WishCard } from '../components';
+import { go, Mascot, Paper, WishCard } from '../components';
 import NoWish from './NoWish';
 import type { Props } from './types';
+import { PixelIcon } from '../PixelIcon';
+import './Today.css';
 
 const isDone = (data: Props['data'], task: Task) =>
   task.status === 'done' ||
@@ -29,23 +19,29 @@ export function Today({ data, notify, actions }: Props) {
   const wish = data.wish,
     day = productDay();
   const tasks = wish?.tasks.filter((t) => t.date === day) || [];
-  const shownTasks = tasks;
-  const [selected, setSelected] = useState<Task | null>(null),
+  const [selectedId, setSelectedId] = useState<string | null>(null),
     [image, setImage] = useState(''),
     [note, setNote] = useState(''),
     [amount, setAmount] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  const recordHeading = useRef<HTMLHeadingElement>(null);
+  const selected = tasks.find((task) => task.id === selectedId);
   const current = selected ? data.checkins.find((c) => c.taskId === selected.id) : undefined;
   useEffect(() => {
-    setSelected(null);
+    setSelectedId(null);
     setImage('');
     setNote('');
     setAmount('');
+    setError('');
   }, [wish?.id]);
+  const canEdit =
+    !!selected &&
+    !isDone(data, selected) &&
+    (selected.status !== 'missed' || canMakeup(data, selected));
   async function upload(file?: File) {
-    if (!file) return;
+    if (!file || !canEdit || busy) return;
     setBusy(true);
     setError('');
     try {
@@ -57,7 +53,7 @@ export function Today({ data, notify, actions }: Props) {
     }
   }
   async function submit() {
-    if (!selected || !image || busy) return;
+    if (!selected || !canEdit || !image || busy) return;
     let amountCents: number | undefined;
     if (selected.kind === 'money') {
       const yuan = Number(amount);
@@ -77,7 +73,10 @@ export function Today({ data, notify, actions }: Props) {
         await actions.checkin(selected.id, image, note.trim(), amountCents);
         notify('今天的小事已记录，心意又近了一点。');
       }
-      setSelected(null);
+      recordHeading.current?.focus({
+        preventScroll: !window.matchMedia('(max-width: 640px)').matches,
+      });
+      setSelectedId(null);
       setImage('');
       setNote('');
       setAmount('');
@@ -89,59 +88,67 @@ export function Today({ data, notify, actions }: Props) {
   }
   if (!wish)
     return (
-      <div className="page">
+      <div className="page postal-waiting">
         <NoWish />
       </div>
     );
   const due = settleDue(data);
-  const completed = shownTasks.filter((t) => t.kind !== 'money' && isDone(data, t)).length;
+
+  const requiredTasks = tasks.filter((task) => task.kind !== 'money');
+  const completed = requiredTasks.filter((task) => isDone(data, task)).length;
+  const finished = requiredTasks.length > 0 && completed === requiredTasks.length;
   return (
-    <div className="page">
-      <Heading
-        eyebrow="A LITTLE SOMETHING, TODAY"
-        title="今天，也替心意走一小步"
-        description="不用做很多。认真做完一件，就是很好的一天。"
-      />
-      <div className="today-layout">
-        <aside>
+    <div className="today-scene">
+      <header className="today-scene-header">
+        <div className="today-hanging-sign">
+          <span>
+            <PixelIcon name="mail" size={20} /> 暖木愿望邮局
+          </span>
+          <h1>今天，也替心意走一小步</h1>
+        </div>
+        <Mascot
+          small
+          message={finished ? '今天的两件小事，都好好收到了。照片只替你收着。' : '照片只替你收着。'}
+        />
+      </header>
+      <div className="today-counter">
+        <aside className="today-wish" aria-label="这份心意">
           <WishCard wish={wish} />
-          <div className="drawer">
-            <span>?</span>
-            <p>
-              有一份心意
-              <br />
-              到时候再打开。
-            </p>
+          <div className="today-lockbox">
+            <div className="today-lockbox-plate" aria-hidden="true">
+              <PixelIcon name="question" size={35} />
+              <PixelIcon name="lock" size={22} />
+            </div>
+            <p>到时候再打开</p>
           </div>
-          <Mascot
-            small
-            message={
-              completed === 2 ? '今天的两件小事，都好好收到了。' : '我会替你保管这些小小的认真。'
-            }
-          />
         </aside>
-        <div>
-          <div className="section-label">
-            <h2>今天的小事</h2>
-            <span className="tag green">已完成 {completed}/2</span>
+        <section className="today-board" aria-labelledby="today-board-heading">
+          <div className="today-board-heading">
+            <h2 id="today-board-heading">
+              <PixelIcon name="heart" size={24} /> 今天的小事
+            </h2>
+            {requiredTasks.length > 0 && (
+              <span className="today-tally">
+                已完成 {completed}/{requiredTasks.length}
+              </span>
+            )}
           </div>
-          {shownTasks.length ? (
-            shownTasks.map((task) => {
+          {tasks.length ? (
+            tasks.map((task) => {
               const done = isDone(data, task);
               const missed = task.status === 'missed';
+              const active = selected?.id === task.id;
               return (
-                <Paper key={task.id} className={`task-card ${done ? 'done' : ''}`}>
-                  <div className="task-heading">
-                    <span className="task-symbol">
-                      {task.kind === 'ta' ? (
-                        <Heart />
-                      ) : task.kind === 'self' ? (
-                        <Leaf />
-                      ) : (
-                        <Sprout />
-                      )}
-                    </span>
-                    <span className="eyebrow">
+                <Paper
+                  key={task.id}
+                  className={`today-task ${done ? 'today-task-done' : ''} ${active ? 'today-task-active' : ''}`}
+                >
+                  <div className="today-task-heading">
+                    <PixelIcon
+                      name={task.kind === 'ta' ? 'heart' : task.kind === 'self' ? 'book' : 'coin'}
+                      size={30}
+                    />
+                    <span className="today-task-kind">
                       {task.kind === 'ta'
                         ? `为${wish.name}`
                         : task.kind === 'self'
@@ -150,13 +157,13 @@ export function Today({ data, notify, actions }: Props) {
                       {task.kind === 'money' ? '' : ' · 必做'}
                     </span>
                     {done && (
-                      <span className="done-label">
-                        <Check size={14} />
+                      <span className="today-task-stamp">
+                        <PixelIcon name="check" size={16} />
                         {task.status === 'made_up' ? '已补卡' : '已完成'}
                       </span>
                     )}
                     {!done && missed && (
-                      <span className="done-label missed-label">
+                      <span className="today-task-stamp today-task-missed">
                         {canMakeup(data, task) ? '可补卡' : '已错过'}
                       </span>
                     )}
@@ -181,8 +188,13 @@ export function Today({ data, notify, actions }: Props) {
                   </p>
                   <button
                     className={done ? 'secondary' : 'primary'}
+                    disabled={busy}
+                    aria-controls="today-record"
+                    aria-current={active || undefined}
                     onClick={() => {
-                      setSelected(task);
+                      setSelectedId(task.id);
+                      recordHeading.current?.focus();
+                      if (active) return;
                       const c = data.checkins.find((r) => r.taskId === task.id);
                       setImage(c?.image || '');
                       setNote(c?.note || '');
@@ -203,7 +215,7 @@ export function Today({ data, notify, actions }: Props) {
             })
           ) : (
             <Paper className="empty">
-              <CheckCheck size={34} />
+              <PixelIcon name="check" size={34} />
               <h2>这一份约定，已经走到这里</h2>
               <p>今天没有新的任务，可以翻翻记录。</p>
               {due && (
@@ -213,35 +225,33 @@ export function Today({ data, notify, actions }: Props) {
               )}
             </Paper>
           )}
-          <p className="quiet-note">
-            <LockKeyhole size={14} />
-            记录只属于你，不会出现在愿签池。
+          <p className="today-board-note">
+            每天 04:00（中国时间）更新当天的小事。周末会自动出现金额任务。
           </p>
-          <p className="quiet-note">
-            <Clock size={14} />
-            每天 04:00（中国时间）更新当天的小事；周末会自动出现金额任务。
+        </section>
+        <section className="today-record" id="today-record" aria-labelledby="today-record-heading">
+          <h2 id="today-record-heading" ref={recordHeading} tabIndex={-1}>
+            <PixelIcon name="pen" size={25} /> 记录小事
+          </h2>
+          <p className="today-record-selection">
+            {selected ? selected.title : '先选一件今天的小事'}
           </p>
-        </div>
-        <Paper className="record-panel">
-          <span className="eyebrow">COLLECT A LITTLE MOMENT</span>
-          <h2>{current ? '这件小事，留在这里' : '留下一点今天的痕迹'}</h2>
-          <p>{selected ? selected.title : '先选一件今天的小事，再把照片放进来。'}</p>
           {!selected ? (
-            <div className="upload-empty">
-              <Camera size={40} />
-              <span>左侧选择“去记录”开始</span>
+            <div className="today-upload today-upload-idle">
+              <PixelIcon name="camera" size={40} />
+              <span>选择任务上的“去记录”开始</span>
             </div>
           ) : (
             <>
               <div
-                className="dropzone"
+                className="today-upload"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (!current) void upload(e.dataTransfer.files[0]);
+                  if (canEdit) void upload(e.dataTransfer.files[0]);
                 }}
                 onPaste={(e) => {
-                  if (!current) {
+                  if (canEdit && !busy) {
                     const file = Array.from(e.clipboardData.files)[0];
                     if (file) {
                       e.preventDefault();
@@ -249,26 +259,29 @@ export function Today({ data, notify, actions }: Props) {
                     }
                   }
                 }}
-                tabIndex={0}
+                tabIndex={canEdit ? 0 : undefined}
                 role="group"
                 aria-label="照片上传区，支持拖入或粘贴图片"
               >
-                {image ? (
-                  <img className="proof" src={image} alt="这次行动的私人记录" />
+                {current?.image || image ? (
+                  <img
+                    className="today-proof"
+                    src={current?.image || image}
+                    alt="这次行动的私人记录"
+                  />
                 ) : (
                   <>
-                    <ImagePlus size={34} />
-                    <p>把照片或截图放在这里</p>
-                    <span>点击选择 · 拖入图片 · 粘贴截图</span>
+                    <PixelIcon name="camera" size={42} />
+                    <p>{canEdit ? '上传照片或截图' : '暂无可查看的照片'}</p>
+                    {canEdit && <span>点击选择 · 拖入图片 · 粘贴截图</span>}
                   </>
                 )}
-                {!current && (
+                {canEdit && (
                   <button
                     className="secondary"
                     disabled={busy}
                     onClick={() => input.current?.click()}
                   >
-                    <Upload size={15} />
                     {image ? '更换照片' : '选择照片'}
                   </button>
                 )}
@@ -277,7 +290,10 @@ export function Today({ data, notify, actions }: Props) {
                   hidden
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => void upload(e.target.files?.[0])}
+                  onChange={(e) => {
+                    void upload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
                 />
               </div>
               <label>
@@ -286,17 +302,17 @@ export function Today({ data, notify, actions }: Props) {
                   maxLength={30}
                   rows={3}
                   value={current?.note ?? note}
-                  readOnly={!!current}
+                  readOnly={!canEdit || busy}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="今天有什么想记住的？"
                 />
               </label>
               <div className="field-meta">
-                <span>照片仅自己可见</span>
                 <span>{(current?.note ?? note).length}/30</span>
               </div>
-              {selected.kind === 'money' && (
-                current ? (
+              {selected.kind === 'money' &&
+                (current || canEdit) &&
+                (current ? (
                   <p className="tag money">
                     这次{current.amountKind === 'earned' ? '挣到' : '省下'} ¥
                     {Math.floor((current.amountCents ?? 0) / 100)}
@@ -310,13 +326,13 @@ export function Today({ data, notify, actions }: Props) {
                       max="2000"
                       step="1"
                       inputMode="numeric"
+                      disabled={busy}
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder={selected.moneyKind === 'earn' ? '例如：80' : '例如：30'}
                     />
                   </label>
-                )
-              )}
+                ))}
               {error && (
                 <p role="alert" className="form-error">
                   {error}
@@ -324,10 +340,12 @@ export function Today({ data, notify, actions }: Props) {
               )}
               {current ? (
                 <p className="tag green">
-                  <Check size={14} />
+                  <PixelIcon name="check" size={16} />
                   已保存到账号
                 </p>
-              ) : selected.status === 'missed' && !canMakeup(data, selected) ? (
+              ) : isDone(data, selected) ? (
+                <p className="muted">这件小事已完成。</p>
+              ) : !canEdit ? (
                 <p className="muted">
                   这件小事已经错过，本周补卡券不可用或已跨周，下周会重新发放。
                 </p>
@@ -342,7 +360,7 @@ export function Today({ data, notify, actions }: Props) {
                       ? '正在处理…'
                       : selected.status === 'missed'
                         ? '用补卡券补上'
-                        : '收好今天的记录'}
+                        : '保存记录'}
                   </button>
                   {!image && <p className="muted">添加照片后即可完成记录。</p>}
                   {image && selected.kind === 'money' && !amount && (
@@ -355,7 +373,10 @@ export function Today({ data, notify, actions }: Props) {
               )}
             </>
           )}
-        </Paper>
+          <p className="today-privacy">
+            <PixelIcon name="lock" size={17} /> 记录只属于你
+          </p>
+        </section>
       </div>
     </div>
   );

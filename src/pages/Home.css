@@ -1,0 +1,527 @@
+.postoffice-home {
+  --parchment: #fff3d7;
+  --ink: #392b27;
+  --brick: #a93626;
+  --oak: #9b542e;
+  --pixel-corners: polygon(
+    0 12px,
+    6px 12px,
+    6px 6px,
+    12px 6px,
+    12px 0,
+    calc(100% - 12px) 0,
+    calc(100% - 12px) 6px,
+    calc(100% - 6px) 6px,
+    calc(100% - 6px) 12px,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 6px) calc(100% - 12px),
+    calc(100% - 6px) calc(100% - 6px),
+    calc(100% - 12px) calc(100% - 6px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    12px calc(100% - 6px),
+    6px calc(100% - 6px),
+    6px calc(100% - 12px),
+    0 calc(100% - 12px)
+  );
+  position: relative;
+  min-height: 56.5vw;
+  background: #713a26 url('/assets/postoffice.webp') center top / 100% 100% no-repeat;
+  color: var(--ink);
+  isolation: isolate;
+}
+
+.postoffice-board {
+  position: absolute;
+  top: 8.5%;
+  left: 8%;
+  width: 33%;
+  filter: drop-shadow(0 0 2px #291912) drop-shadow(4px 5px 0 #3b2019);
+}
+
+.postoffice-hangers {
+  position: absolute;
+  inset: -5vw 20% auto;
+  display: flex;
+  justify-content: space-between;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.postoffice-hangers i {
+  position: relative;
+  width: 10px;
+  height: 6.3vw;
+  border-inline: 2px solid #59331b;
+  background: repeating-linear-gradient(#ffc451 0 8px, #a76024 8px 12px);
+  box-shadow: inset 2px 0 #ffdf8b;
+}
+
+.postoffice-hangers i::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: -5px;
+  width: 16px;
+  height: 15px;
+  border: 3px solid #3e2417;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px #f8a724;
+}
+
+.postoffice-letter {
+  display: grid;
+  gap: clamp(12px, 1.4vw, 24px);
+  padding: clamp(22px, 2.65vw, 46px) clamp(16px, 2.2vw, 40px);
+  clip-path: var(--pixel-corners);
+  background: radial-gradient(ellipse, var(--parchment) 55%, #ffdfad);
+  border: 4px solid #d99562;
+  outline: 2px dashed #e0ac75;
+  outline-offset: -10px;
+  text-align: center;
+}
+
+.postoffice-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.58em;
+  font-size: clamp(15px, 1.55vw, 27px);
+  font-weight: 800;
+}
+
+.postoffice-ornament::before,
+.postoffice-ornament::after {
+  content: '';
+  width: 1.5em;
+  border-top: 2px solid var(--brick);
+}
+
+.postoffice-ornament span {
+  color: var(--brick);
+  font-size: 0.65em;
+}
+
+.postoffice-letter h1 {
+  margin: 0;
+  color: #49231a;
+  font-size: clamp(23px, 3.05vw, 58px);
+  font-weight: 900;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.postoffice-letter > p {
+  margin: 0;
+  font-size: clamp(13px, 1.32vw, 24px);
+  font-weight: 650;
+}
+
+.postoffice-home .primary,
+.postoffice-home .secondary {
+  border: 3px solid #52291b;
+  border-radius: 0;
+  clip-path: var(--pixel-corners);
+  font-weight: 800;
+}
+
+.postoffice-home .primary {
+  background: var(--brick);
+  color: var(--parchment);
+  box-shadow:
+    inset 0 0 0 3px #ffd6a1,
+    inset 0 -6px #872918;
+}
+
+.postoffice-home .secondary {
+  background: #ffe5ae;
+  color: #49231a;
+  box-shadow:
+    inset 0 0 0 3px #fff4d5,
+    inset 0 -6px #edba84;
+}
+
+.postoffice-home button:focus-visible {
+  outline: 3px solid #382722;
+  outline-offset: -8px;
+  box-shadow: inset 0 0 0 8px #fff0cb;
+}
+
+.postoffice-action,
+.postoffice-pool {
+  width: 100%;
+  min-height: clamp(48px, 5.5vw, 92px);
+  font-size: clamp(17px, 2.65vw, 46px);
+}
+
+.postoffice-home .postoffice-pool {
+  min-height: clamp(44px, 4.35vw, 76px);
+  font-size: clamp(16px, 1.95vw, 34px);
+}
+
+.postoffice-letter .private {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  color: #684031;
+  font-size: clamp(11px, 0.93vw, 17px);
+}
+
+.postoffice-character {
+  position: absolute;
+  top: 17%;
+  left: 40%;
+  bottom: 20%;
+  width: 28%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.postoffice-character .mascot {
+  position: static;
+  margin: 0;
+}
+
+.postoffice-character .mascot img {
+  position: absolute;
+  top: 3%;
+  left: -11%;
+  width: 94%;
+  max-width: none;
+  height: auto;
+}
+
+.postoffice-character .speech {
+  position: absolute;
+  top: 0;
+  right: 1%;
+  max-width: 54%;
+  margin: 0;
+  padding: 12px 15px;
+  color: #49231a;
+  background: var(--parchment);
+  font-size: clamp(13px, 1.32vw, 23px);
+  font-weight: 750;
+  text-wrap: balance;
+}
+
+.postoffice-sign {
+  position: absolute;
+  bottom: 2%;
+  left: 15%;
+  display: grid;
+  width: 48%;
+  gap: 3px;
+  transform: rotate(-4deg);
+  padding: clamp(6px, 0.8vw, 15px);
+  border: 3px solid #59331b;
+  outline: 2px dashed #ae4732;
+  outline-offset: -8px;
+  background: #ffe9bb;
+  box-shadow: -6px 6px 0 #4f2b1b;
+}
+
+.postoffice-sign strong {
+  color: var(--brick);
+  font-size: clamp(13px, 1.4vw, 24px);
+}
+
+.postoffice-sign span {
+  font-size: clamp(10px, 0.86vw, 15px);
+  line-height: 1.3;
+}
+
+.postoffice-sign .pixel-icon {
+  justify-self: end;
+}
+
+.postoffice-tour {
+  position: absolute;
+  right: 2%;
+  bottom: 24%;
+  width: 31%;
+  display: grid;
+  gap: clamp(8px, 0.8vw, 17px);
+  padding: clamp(14px, 1.8vw, 30px);
+  border: 4px solid #78452c;
+  outline: 2px dashed #b95437;
+  outline-offset: -10px;
+  background: radial-gradient(ellipse, var(--parchment) 58%, #f4d5a6);
+  box-shadow: 5px 6px 0 #45231799;
+  animation: postoffice-tour-enter 220ms ease-out both;
+}
+
+.postoffice-tour.leaving {
+  animation: postoffice-tour-exit 220ms ease-in both;
+  pointer-events: none;
+}
+
+.postoffice-tour-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.postoffice-tour h2 {
+  margin: 0 auto 0 0;
+  padding: 3px 16px;
+  background: var(--brick);
+  color: var(--parchment);
+  font-size: clamp(18px, 2vw, 35px);
+  clip-path: var(--pixel-corners);
+}
+
+.postoffice-tour-postmark {
+  margin: 3px 4px 0 0;
+  color: #b25336;
+  font: 800 clamp(14px, 1.6vw, 28px) / 0.34 serif;
+  transform: scaleX(1.5) rotate(-9deg);
+}
+
+.postoffice-tour-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid #684031;
+  border-radius: 0;
+  background: var(--parchment);
+  color: #49231a;
+}
+
+.postoffice-tour > p {
+  margin: 0;
+  font-size: clamp(13px, 1.3vw, 22px);
+  font-weight: 750;
+}
+
+.postoffice-tour-steps,
+.postoffice-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.postoffice-tour-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.postoffice-tour-steps li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  font-size: clamp(11px, 1.17vw, 20px);
+  font-weight: 750;
+}
+
+.postoffice-tour-steps li + li::before {
+  content: '›';
+  position: absolute;
+  top: 12%;
+  left: -0.18em;
+  color: var(--brick);
+  font: 700 clamp(18px, 2.3vw, 37px) / 1 sans-serif;
+}
+
+.postoffice-tour-cta {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0.54em 1em;
+  font-size: clamp(14px, 1.4vw, 25px);
+}
+
+.postoffice-tour-count {
+  justify-self: end;
+  width: 57%;
+  height: 9px;
+  border-radius: 12px;
+  background: #ecc295;
+}
+
+.postoffice-tour-count i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #bd5a27;
+  transform-origin: left;
+  transition: transform 100ms linear;
+}
+
+.postoffice-steps {
+  position: absolute;
+  inset: auto 3% 2%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  padding: 1.2vw 1vw;
+  background: var(--parchment);
+  border: 4px solid var(--oak);
+  outline: 1px dashed #be8256;
+  outline-offset: -9px;
+  clip-path: var(--pixel-corners);
+}
+
+.postoffice-steps li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.2vw, 24px);
+  padding-inline: 6px;
+  font-size: clamp(13px, 1.8vw, 32px);
+}
+
+.postoffice-steps li + li {
+  border-inline-start: 2px solid var(--brick);
+}
+
+.postoffice-steps .pixel-icon {
+  flex-shrink: 0;
+}
+
+@keyframes postoffice-tour-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes postoffice-tour-exit {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 1020px) {
+  .postoffice-home {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.84fr);
+    align-items: center;
+    gap: 18px;
+    padding: 32px 5% 18px;
+    background-position: center top;
+    background-size: auto max(560px, 100%);
+  }
+
+  .postoffice-board,
+  .postoffice-character,
+  .postoffice-tour,
+  .postoffice-steps {
+    position: relative;
+    inset: auto;
+    width: auto;
+  }
+
+  .postoffice-letter h1 {
+    font-size: clamp(24px, 4.05vw, 41px);
+  }
+
+  .postoffice-character {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch;
+    min-height: 305px;
+  }
+
+  .postoffice-character .mascot img {
+    width: min(105%, 320px);
+    top: auto;
+    bottom: -22%;
+  }
+
+  .postoffice-character .speech {
+    right: 4%;
+  }
+
+  .postoffice-tour {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .postoffice-steps {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .postoffice-home {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
+    padding: 22px 5% 14px;
+    background-size: auto 720px;
+    background-position: 53% top;
+  }
+
+  .postoffice-hangers {
+    top: -24px;
+  }
+
+  .postoffice-hangers i {
+    height: 29px;
+  }
+
+  .postoffice-letter {
+    gap: 13px;
+  }
+
+  .postoffice-letter h1 {
+    font-size: clamp(23px, 7.15vw, 36px);
+  }
+
+  .postoffice-character {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 230px;
+  }
+
+  .postoffice-character .mascot img {
+    width: min(68%, 246px);
+    left: 5%;
+    bottom: -35%;
+  }
+
+  .postoffice-sign {
+    width: 42%;
+    left: 45%;
+    bottom: 6%;
+  }
+
+  .postoffice-tour {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .postoffice-steps {
+    padding: 10px 5px;
+  }
+
+  .postoffice-steps li {
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .postoffice-steps .pixel-icon {
+    zoom: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .postoffice-tour,
+  .postoffice-tour.leaving {
+    animation: none;
+  }
+
+  .postoffice-tour.leaving {
+    visibility: hidden;
+  }
+
+  .postoffice-tour-count i {
+    transition: none;
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mail, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Heading, Paper } from '../components';
+import { PixelIcon } from '../PixelIcon';
 import { CATEGORY_TO_TYPE, categoryLabel } from '../remote';
 import type { ReplyDto } from '../api';
 import type { Props } from './types';
@@ -143,7 +144,7 @@ export function Pool({ data, update, notify, actions }: Props) {
         description="看看水面上的愿签，也给别人的牵挂留一点温柔。"
       />
       <div className="pool-banner">
-        <Mail size={36} />
+        <PixelIcon name="wave" size={38} />
         <p>
           每一封漂来的信，
           <br />
@@ -180,7 +181,7 @@ export function Pool({ data, update, notify, actions }: Props) {
             <p>{post.text}</p>
             <div className="pool-author">
               <span>{post.author}</span>
-              <Mail size={17} />
+              <PixelIcon name="stamp" size={24} />
             </div>
             <button className="secondary full" onClick={() => void open(post)}>
               读一读这份心意

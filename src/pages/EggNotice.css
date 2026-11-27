@@ -1,0 +1,122 @@
+.egg-notice {
+  --notice-ink: #783d2a;
+  --notice-paper: #fff0d4;
+  position: relative;
+  width: 100%;
+  color: #392b27;
+  padding: clamp(14px, 2vw, 25px);
+  background: var(--notice-paper);
+  border: 3px solid var(--notice-ink);
+  outline: 1px solid #c99468;
+  outline-offset: -8px;
+  box-shadow: 4px 6px #3c211b74;
+  overflow-wrap: anywhere;
+  text-align: left;
+  animation: egg-notice-rise 0.26s ease-out both;
+}
+
+.egg-notice-ticket {
+  border-inline-style: dashed;
+  background: #ffecd3;
+}
+
+.egg-notice-invitation {
+  --notice-ink: #74485a;
+  --notice-paper: #ffefdf;
+  border-radius: 17px 5px;
+  outline-style: double;
+}
+
+.egg-notice-care {
+  --notice-ink: #607254;
+  --notice-paper: #f4f2d8;
+  border-radius: 12px;
+}
+
+.egg-notice-stationery {
+  --notice-paper: #fff7db;
+  border-top-color: #ac5842;
+  border-top-width: 8px;
+}
+
+.egg-notice-parcel {
+  --notice-ink: #735039;
+  --notice-paper: #f6dfb7;
+  border-top: 9px double #a36d39;
+}
+
+.egg-notice .egg-notice-mark {
+  width: fit-content;
+  margin: 1px auto 6px;
+  padding: 5px 16px;
+  border-bottom: 2px solid var(--notice-ink);
+}
+
+.egg-notice h1,
+.egg-notice h2,
+.egg-notice-label {
+  display: block;
+  text-align: center;
+  color: var(--notice-ink);
+}
+
+.egg-notice-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.egg-notice h1,
+.egg-notice h2 {
+  margin: 5px 0 8px;
+  font:
+    800 clamp(20px, 2vw, 31px) / 1.32 'Microsoft YaHei',
+    sans-serif;
+}
+
+.egg-notice p {
+  margin: 10px 0;
+}
+
+.egg-notice .egg-notice-cost {
+  width: fit-content;
+  margin-inline: auto;
+  padding: 3px 8px;
+  text-align: center;
+  border: 1px solid var(--notice-ink);
+  color: var(--notice-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.egg-notice ol {
+  padding-inline-start: 1.5em;
+  margin: 8px 0;
+}
+
+.egg-notice li + li {
+  margin-top: 5px;
+}
+
+.egg-notice .egg-notice-closing {
+  padding-top: 8px;
+  border-top: 1px dashed var(--notice-ink);
+  color: var(--notice-ink);
+  font-weight: 700;
+}
+
+@keyframes egg-notice-rise {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .egg-notice {
+    animation: none;
+  }
+}

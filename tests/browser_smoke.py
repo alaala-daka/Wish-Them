@@ -9,16 +9,19 @@
 """
 from pathlib import Path
 import json
+import os
 import sys
 import urllib.request
 from playwright.sync_api import sync_playwright, expect
 
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'test-results'
-OUT.mkdir(exist_ok=True)
+FRONTEND = os.environ.get('YUANTA_BROWSER_FRONTEND', 'http://127.0.0.1:5173').rstrip('/')
+BACKEND = os.environ.get('YUANTA_BROWSER_BACKEND', 'http://127.0.0.1:8787').rstrip('/')
+OUT = ROOT / 'test-results' / 'postoffice-redesign'
+OUT.mkdir(parents=True, exist_ok=True)
 
-for name, url in [('backend', 'http://127.0.0.1:8787/api/health'), ('frontend', 'http://127.0.0.1:5173/')]:
+for name, url in [('backend', f'{BACKEND}/api/health'), ('frontend', f'{FRONTEND}/')]:
     try:
         with urllib.request.urlopen(url, timeout=3) as response:
             assert response.status == 200
@@ -32,11 +35,12 @@ with sync_playwright() as p:
     errors: list[str] = []
     page.on('pageerror', lambda err: errors.append(str(err)))
 
-    page.goto('http://127.0.0.1:5173/')
+    page.goto(f'{FRONTEND}/')
     page.evaluate("indexedDB.deleteDatabase('yuanta-postoffice'); localStorage.clear()")
     page.reload()
     expect(page.get_by_role('button', name='替TA许个愿', exact=True)).to_be_visible(timeout=15000)
-    expect(page.locator('.recovery-banner')).to_be_visible()
+    expect(page.get_by_role('button', name='跟着小愿走一遍')).to_be_visible()
+    expect(page.locator('.toast')).to_have_count(0, timeout=8000)
     page.screenshot(path=str(OUT / '01-home.png'), full_page=True)
 
     # 四步许愿：关系 → 愿望（含 AI 建议）→ 五问 → 签名立契
@@ -69,14 +73,19 @@ with sync_playwright() as p:
     page.get_by_role('button', name='去记录', exact=True).first.click()
     page.locator('input[type=file]').set_input_files(str(ROOT / 'public/assets/postoffice.png'))
     page.get_by_label('留一句话（可选）').fill('今天给妈妈打了电话。')
-    expect(page.get_by_role('button', name='收好今天的记录')).to_be_enabled(timeout=15000)
-    page.get_by_role('button', name='收好今天的记录').click()
+    expect(page.get_by_role('button', name='保存记录')).to_be_enabled(timeout=15000)
+    page.get_by_role('button', name='保存记录').click()
     expect(page.get_by_text('已完成 1/2', exact=True)).to_be_visible(timeout=20000)
+    expect(page.get_by_role('heading', name='记录小事')).to_be_focused()
     page.reload()
     expect(page.get_by_text('已完成 1/2', exact=True)).to_be_visible(timeout=20000)
     page.get_by_role('button', name='查看记录', exact=True).first.click()
-    expect(page.locator('img.proof')).to_be_visible(timeout=15000)
-    assert page.locator('img.proof').evaluate('el => el.naturalWidth') > 0
+    proof = page.get_by_role('img', name='这次行动的私人记录')
+    expect(proof).to_be_visible(timeout=15000)
+    assert proof.evaluate('el => el.naturalWidth') > 0
+    page.get_by_role('button', name='去记录', exact=True).first.click()
+    expect(proof).to_have_count(0)
+    expect(page.get_by_role('button', name='保存记录')).to_be_disabled()
     page.screenshot(path=str(OUT / '02-today.png'), full_page=True)
 
     # 账本：周预算 + 支出，汇总来自服务端
@@ -88,7 +97,13 @@ with sync_playwright() as p:
     page.get_by_label('记账类型').select_option('expense')
     page.get_by_label('金额（元，取整）').fill('32')
     page.get_by_role('button', name='记到账本', exact=True).click()
-    expect(page.locator('.ledger-summary .total strong')).to_have_text('¥48', timeout=15000)
+    expect(page.get_by_label('金额（元，取整）')).to_have_value('', timeout=15000)
+    page.reload()
+    expense_row = page.locator('.ledger-row').filter(
+        has=page.get_by_text('¥32', exact=True)
+    )
+    expect(expense_row.locator('span')).to_have_text('非必要支出', timeout=15000)
+    expect(page.locator('.ledger-summary .total strong')).to_have_text('¥0', timeout=15000)
     page.screenshot(path=str(OUT / '03-ledger.png'), full_page=True)
 
     # 愿签池：没有真实公开帖时回退为明确标注的示例；回信保存在本机
@@ -107,7 +122,8 @@ with sync_playwright() as p:
     expect(page.locator('.recovery-code code')).to_be_visible()
 
     # 流程速览：纯前端教程演示，无图片、无后端写入
-    page.goto('http://127.0.0.1:5173/#/tour')
+    page.get_by_role('link', name='邮局首页', exact=True).click()
+    page.get_by_role('button', name='跟着小愿走一遍').click()
     expect(page.get_by_role('heading', name='三分钟，看完整段心意')).to_be_visible(timeout=15000)
     assert '评委' not in page.locator('body').inner_text()
     page.get_by_role('button', name='下一步').click()
@@ -137,7 +153,7 @@ with sync_playwright() as p:
     for width in [1920, 1440, 1280, 768, 375]:
         page.set_viewport_size({'width': width, 'height': 900})
         for route in ['/', '/start', '/today', '/ledger', '/pool', '/me', '/tour']:
-            page.goto(f'http://127.0.0.1:5173/#{route}')
+            page.goto(f'{FRONTEND}/#{route}')
             page.wait_for_timeout(150)
             overflow = page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth + 1')
             assert not overflow, f'{route} 在 {width}px 出现横向溢出'

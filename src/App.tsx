@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mail, BookOpen, Sun, Waves, UserRound, X, Leaf } from 'lucide-react';
+import { Mail, X } from 'lucide-react';
 import {
   ApiError,
   addLedgerEntry as apiAddLedgerEntry,
@@ -40,6 +40,15 @@ import { go } from './components';
 import { Home, Today, Ledger, Pool, Mine, Settle } from './pages';
 import Create from './Create';
 import Tour from './pages/Tour';
+import { PixelIcon } from './PixelIcon';
+
+const nav = [
+  ['/', '邮局首页', 'mail'],
+  ['/today', '今日', 'sun'],
+  ['/pool', '愿签池', 'wave'],
+  ['/ledger', '账本', 'book'],
+  ['/me', '我的', 'person'],
+] as const;
 
 export type Update = (fn: (data: AppData) => AppData) => Promise<void>;
 
@@ -81,10 +90,6 @@ export default function App() {
     queue = useRef(Promise.resolve());
 
   const notify = useCallback((message: string) => setToast(message), []);
-
-  useEffect(() => {
-    document.body.classList.toggle('home-route', route === '/' && !demo);
-  }, [route, demo]);
 
   const commit = useCallback((next: AppData) => {
     stateRef.current = next;
@@ -255,13 +260,18 @@ export default function App() {
         }
         throw error;
       }
-      await saveAnswers(session.token, created.wish.id, {
-        q1: draft.answers[0].trim(),
-        q2: draft.answers[1].trim(),
-        q3: draft.answers[2].trim(),
-        q4: draft.answers[3].trim(),
-        q5: draft.answers[4].trim(),
-      }, draft.meta as Record<string, string>);
+      await saveAnswers(
+        session.token,
+        created.wish.id,
+        {
+          q1: draft.answers[0].trim(),
+          q2: draft.answers[1].trim(),
+          q3: draft.answers[2].trim(),
+          q4: draft.answers[3].trim(),
+          q5: draft.answers[4].trim(),
+        },
+        draft.meta as Record<string, string>,
+      );
       await signContract(session.token, created.wish.id, 10);
       createKeyRef.current = '';
       const next = { ...(stateRef.current ?? localRef.current), draft: emptyDraft() };
@@ -452,13 +462,6 @@ export default function App() {
     isDemo: !!demo,
     actions: pageActions,
   };
-  const nav = [
-    ['/', '邮局首页', Mail],
-    ['/today', '今日', Sun],
-    ['/pool', '愿签池', Waves],
-    ['/ledger', '账本', BookOpen],
-    ['/me', '我的', UserRound],
-  ] as const;
   let content;
   if (route === '/tour') content = <Tour />;
   else if (!active) content = <div className="loading">{error || '正在打开暖木邮局…'}</div>;
@@ -509,28 +512,31 @@ export default function App() {
         跳到主要内容
       </a>
       {route !== '/tour' && (
-      <header className="topbar">
-        <a href="#/" className="brand" aria-label="愿TA 邮局首页">
-          <Mail strokeWidth={1.8} />
-          <strong>愿TA</strong>
-        </a>
-        <nav aria-label="主要导航">
-          {nav.map(([path, label, Icon]) => (
-            <a
-              key={path}
-              href={`#${path}`}
-              className={route === path ? 'active' : ''}
-              aria-current={route === path ? 'page' : undefined}
-            >
-              <Icon size={17} />
-              {label}
-            </a>
-          ))}
-        </nav>
-        <span className="header-note">
-          <Leaf size={16} /> 把心意带到现实
-        </span>
-      </header>
+        <header className="topbar">
+          <a href="#/" className="brand" aria-label="愿TA 邮局首页">
+            <PixelIcon name="mail" size={35} />
+            <strong>愿TA</strong>
+          </a>
+          <nav aria-label="主要导航">
+            {nav.map(([path, label, icon]) => (
+              <a
+                key={path}
+                href={`#${path}`}
+                className={route === path ? 'active' : ''}
+                aria-current={route === path ? 'page' : undefined}
+              >
+                <PixelIcon name={icon} size={18} />
+                {label}
+              </a>
+            ))}
+          </nav>
+          <span className="postoffice-signature">
+            暖木愿望邮局
+            <span className="postoffice-portrait" aria-hidden="true">
+              <img src="/assets/xiaoyuan.png" alt="" />
+            </span>
+          </span>
+        </header>
       )}
       {demo && (
         <div className="demo-bar">
@@ -560,7 +566,13 @@ export default function App() {
           </div>
         </div>
       )}
-      <main id="main-content" tabIndex={-1}>
+      <main
+        id="main-content"
+        className={
+          ['/start', '/ledger', '/pool', '/me'].includes(route) ? 'postal-interior' : undefined
+        }
+        tabIndex={-1}
+      >
         {content}
       </main>
       {toast && (
