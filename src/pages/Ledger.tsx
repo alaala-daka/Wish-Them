@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, BookOpen } from 'lucide-react';
 import type { LedgerEntry } from '../domain';
 import { Heading, Paper } from '../components';
+import { PixelIcon } from '../PixelIcon';
 import NoWish from './NoWish';
 import type { Props } from './types';
 
@@ -75,15 +76,21 @@ export function Ledger({ data, notify, actions, isDemo }: Props) {
       />
       <div className="ledger-summary">
         <Paper>
-          <span>累计省下</span>
+          <span className="ledger-caption">
+            <PixelIcon name="coin" size={22} /> 累计省下
+          </span>
           <strong>¥{summary.saved}</strong>
         </Paper>
         <Paper>
-          <span>累计挣到</span>
+          <span className="ledger-caption">
+            <PixelIcon name="stamp" size={22} /> 累计挣到
+          </span>
           <strong>¥{summary.earned}</strong>
         </Paper>
         <Paper className="total">
-          <span>累计心意</span>
+          <span className="ledger-caption">
+            <PixelIcon name="heart" size={22} /> 累计心意
+          </span>
           <strong>¥{summary.total}</strong>
         </Paper>
       </div>

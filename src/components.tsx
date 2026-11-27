@@ -1,6 +1,7 @@
-import { ArrowRight, Mail, LockKeyhole, Sparkles, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowRight, LockKeyhole, Sparkles, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { Wish } from './domain';
+import { PixelIcon } from './PixelIcon';
 export const go = (path: string) => {
   window.location.hash = path;
   window.scrollTo(0, 0);
@@ -25,7 +26,7 @@ export function Paper({ children, className = '' }: { children: ReactNode; class
 export function WishCard({ wish }: { wish: Pick<Wish, 'name' | 'text' | 'ai'> }) {
   return (
     <div className="wish-card">
-      <Mail size={28} aria-hidden="true" />
+      <PixelIcon name="mail" size={29} />
       <span className="eyebrow">一封认真收藏的心意</span>
       <h2>替{wish.name}许愿</h2>
       <p>{wish.text}</p>
@@ -72,15 +73,34 @@ export function Heading({
 
 const TOUR_POPUP_MS = 10000;
 
-export function TourPopup() {
+export function TourPopup({ homeAction }: { homeAction: RefObject<HTMLButtonElement | null> }) {
   const [phase, setPhase] = useState<'open' | 'leaving' | 'closed'>('open');
   const [progress, setProgress] = useState(1);
+  const [visible, setVisible] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const card = useRef<HTMLElement>(null);
   const remaining = useRef(TOUR_POPUP_MS);
-  const lastTick = useRef<number | null>(null);
 
   const dismiss = useCallback(() => {
+    if (card.current?.contains(document.activeElement)) {
+      homeAction.current?.focus();
+    }
     setPhase((current) => (current === 'open' ? 'leaving' : current));
-  }, []);
+  }, [homeAction]);
+
+  useEffect(() => {
+    if (phase !== 'open' || !card.current) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.intersectionRatio >= 0.6),
+      { threshold: 0.6 },
+    );
+    observer.observe(card.current);
+    return () => observer.disconnect();
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== 'leaving') return;
@@ -89,28 +109,37 @@ export function TourPopup() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== 'open') return;
-    lastTick.current = performance.now();
+    if (phase !== 'open' || !visible || focused) return;
+    let lastTick = performance.now();
+    const resetTick = () => {
+      lastTick = performance.now();
+    };
+    document.addEventListener('visibilitychange', resetTick);
     const timer = window.setInterval(() => {
       const now = performance.now();
-      remaining.current = Math.max(0, remaining.current - (now - (lastTick.current ?? now)));
-      lastTick.current = now;
+      if (document.hidden || card.current?.contains(document.activeElement)) {
+        lastTick = now;
+        return;
+      }
+      remaining.current = Math.max(0, remaining.current - (now - lastTick));
+      lastTick = now;
       setProgress(remaining.current / TOUR_POPUP_MS);
       if (remaining.current <= 0) dismiss();
     }, 100);
     return () => {
+      document.removeEventListener('visibilitychange', resetTick);
       window.clearInterval(timer);
-      lastTick.current = null;
     };
-  }, [phase, dismiss]);
+  }, [phase, visible, focused, dismiss]);
 
   useEffect(() => {
+    if (phase !== 'open') return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') dismiss();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dismiss]);
+  }, [phase, dismiss]);
 
   if (phase === 'closed') return null;
 
@@ -121,48 +150,53 @@ export function TourPopup() {
 
   return (
     <aside
-      className={`tour-pop${phase === 'leaving' ? ' leaving' : ''}`}
-      aria-labelledby="tour-pop-title"
+      ref={card}
+      className={`postoffice-tour${phase === 'leaving' ? ' leaving' : ''}`}
+      aria-labelledby="postoffice-tour-title"
+      inert={phase === 'leaving'}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
     >
-      <div className="tour-pop-head">
-        <span className="tour-pop-title" id="tour-pop-title">
-          <Sparkles size={14} aria-hidden="true" /> 流程速览
+      <div className="postoffice-tour-head">
+        <h2 id="postoffice-tour-title">流程速览</h2>
+        <span className="postoffice-tour-postmark" aria-hidden="true">
+          〰<br />〰<br />〰
         </span>
         <button
           type="button"
-          className="tour-pop-close"
+          className="postoffice-tour-close"
           aria-label="关闭流程速览"
           onClick={dismiss}
         >
-          <X size={16} />
+          <X size={19} aria-hidden="true" />
         </button>
       </div>
-      <div className="tour-pop-body">
-        <span className="tour-pop-avatar" aria-hidden="true">
-          <img src="/assets/xiaoyuan.png" alt="" />
-        </span>
-        <div>
-          <span className="eyebrow">A LITTLE TOUR</span>
-          <h2>三分钟，看完整段心意</h2>
-          <p>许愿、十天小事、攒下一点钱，再拆开最后的彩蛋。</p>
-        </div>
-      </div>
-      <div className="tour-pop-steps" aria-hidden="true">
-        <span>许愿</span>
-        <b>›</b>
-        <span>十天小事</span>
-        <b>›</b>
-        <span>攒钱</span>
-        <b>›</b>
-        <span>彩蛋</span>
-      </div>
-      <div className="tour-pop-foot">
-        <button type="button" className="primary tour-pop-cta" onClick={openTour}>
-          跟着小愿走一遍 <ArrowRight size={15} />
-        </button>
-      </div>
-      <div className="tour-pop-count" aria-hidden="true">
-        <i style={{ width: `${Math.round(progress * 100)}%` }} />
+      <p>三分钟，看完整段心意</p>
+      <ol className="postoffice-tour-steps">
+        <li>
+          <PixelIcon name="mail" size={38} />
+          许愿
+        </li>
+        <li>
+          <PixelIcon name="check" size={38} />
+          十天小事
+        </li>
+        <li>
+          <PixelIcon name="coin" size={38} />
+          攒钱
+        </li>
+        <li>
+          <PixelIcon name="gift" size={38} />
+          彩蛋
+        </li>
+      </ol>
+      <button type="button" className="primary postoffice-tour-cta" onClick={openTour}>
+        跟着小愿走一遍 <ArrowRight size={19} aria-hidden="true" />
+      </button>
+      <div className="postoffice-tour-count" aria-hidden="true">
+        <i style={{ transform: `scaleX(${progress})` }} />
       </div>
     </aside>
   );
